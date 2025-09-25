@@ -273,6 +273,14 @@ def make_trash_dir(base_parent: str) -> str:
     ts = datetime.now().strftime('whatsapp_clean_trash_%Y%m%d_%H%M%S')
     dst = os.path.join(base_parent, ts)
     os.makedirs(dst, exist_ok=True)
+    # Create a .nomedia file so Android's MediaScanner ignores this folder
+    try:
+        nomedia_path = os.path.join(dst, '.nomedia')
+        # create the file if it doesn't exist
+        open(nomedia_path, 'a').close()
+    except Exception:
+        # If we can't create .nomedia (e.g., permission issues), continue silently
+        pass
     return dst
 
 
