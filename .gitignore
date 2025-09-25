@@ -1,0 +1,81 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtualenv
+venv/
+.env
+.envrc
+.env.*
+.env.local
+
+# Pyenv
+.python-version
+
+# Pipenv
+Pipfile.lock
+
+# Poetry
+poetry.lock
+
+# VS Code
+.vscode/
+
+# PyCharm
+.idea/
+*.iml
+
+# Termux / Android
+/storage/
+*.apk
+*.apks
+
+# Logs and local/runtime files
+logs/
+*.log
+*.sqlite3
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Local config
+/.vagrant/
+
+# Ignore compiled bytecode in project scripts folder
+scripts/__pycache__/
+scripts/*.pyc
+
+# Ignore macOS metadata
+.DS_Store
+
+# Ignore user-specific config files
+*.local
+
+# Ignore editable installs
+*.egg-info/
+
+# Keep README and licenses tracked
+!README.md
+!LICENSE
