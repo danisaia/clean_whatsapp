@@ -142,6 +142,7 @@
   "update_git_missing": "Git was not found. In Termux, run: pkg install git",
   "update_done": "Update finished.",
   "update_failed": "Update failed with exit code {code}.",
+  "update_available_notice": "A new version is available. Choose 'Update Clean WhatsApp' to update.",
   "help_title": "Quick help",
   "help_1": "1. First use 'Analyze and clean' to see the preview.",
   "help_2": "2. Files in 'Move to trash' leave the WhatsApp folder, but can be restored from the menu.",

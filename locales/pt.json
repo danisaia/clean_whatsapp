@@ -142,6 +142,7 @@
   "update_git_missing": "Git não encontrado. No Termux, rode: pkg install git",
   "update_done": "Atualização concluída.",
   "update_failed": "A atualização falhou com código {code}.",
+  "update_available_notice": "Uma nova versão está disponível. Escolha 'Atualizar Clean WhatsApp' para atualizar.",
   "help_title": "Ajuda rápida",
   "help_1": "1. Primeiro use 'Analisar e limpar' para ver a prévia.",
   "help_2": "2. Arquivos em 'Mover para lixeira' saem da pasta do WhatsApp, mas podem ser restaurados pelo menu.",

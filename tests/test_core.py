@@ -18,6 +18,8 @@ from clean_whatsapp_app.config import DEFAULTS, normalize_config, validate_confi
 from clean_whatsapp_app.i18n import LANGUAGES, locale_key_sets
 from clean_whatsapp_app.restore import preview_restore_from_log
 from clean_whatsapp_app.scanner import FileRecord, check_storage_access, scan_files
+from clean_whatsapp_app.i18n import I18n
+from clean_whatsapp_app.ui import UI
 
 
 def base_cfg(media_base: str) -> dict:
@@ -157,6 +159,34 @@ class CoreSafetyTests(unittest.TestCase):
         english = key_sets["en"]
         for language in LANGUAGES:
             self.assertEqual(english, key_sets[language], language)
+
+    def test_update_check_only_reports_different_commits(self) -> None:
+        ui = UI(base_cfg("/tmp"), I18n("en"))
+
+        def same_commit_run(args, **_kwargs):
+            result = mock.Mock()
+            result.returncode = 0
+            result.stdout = "abc\n" if args[:2] == ["git", "rev-parse"] else ""
+            result.stderr = ""
+            return result
+
+        with mock.patch("clean_whatsapp_app.ui.subprocess.run", side_effect=same_commit_run):
+            self.assertFalse(ui.check_for_updates_silent())
+
+        def different_commit_run(args, **_kwargs):
+            result = mock.Mock()
+            result.returncode = 0
+            if args == ["git", "rev-parse", "HEAD"]:
+                result.stdout = "abc\n"
+            elif args == ["git", "rev-parse", "origin/main"]:
+                result.stdout = "def\n"
+            else:
+                result.stdout = ""
+            result.stderr = ""
+            return result
+
+        with mock.patch("clean_whatsapp_app.ui.subprocess.run", side_effect=different_commit_run):
+            self.assertTrue(ui.check_for_updates_silent())
 
 
 if __name__ == "__main__":

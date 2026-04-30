@@ -11,6 +11,7 @@ It is designed for regular users:
 - It keeps operation records so files moved to trash can be restored.
 - The interface supports English, Portuguese, Spanish, and French.
 - It can update itself from the main menu when installed from Git.
+- From the second launch onward, it quietly checks for updates and only shows a message when a new version is available.
 - It shows how much storage can be freed before applying cleanup.
 - It lets users filter images, videos, audio, stickers, sent media, and hidden media before scanning.
 
@@ -38,6 +39,20 @@ The app tries to detect common WhatsApp folders:
 If your phone uses another folder, change it from the app settings.
 
 ## Install or update in Termux
+
+Quick install:
+
+```bash
+pkg update && pkg install -y curl && curl -fsSL https://raw.githubusercontent.com/danisaia/clean_whatsapp/main/install.sh | bash
+```
+
+After that, open Clean WhatsApp with:
+
+```bash
+clean-whatsapp
+```
+
+Manual install:
 
 1. Open Termux.
 

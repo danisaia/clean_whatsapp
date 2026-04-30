@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import subprocess
 from pathlib import Path
 from typing import Dict, Iterable, List
@@ -44,13 +45,49 @@ class UI:
     def t(self, key: str, **kwargs) -> str:
         return self.i18n.t(key, **kwargs)
 
+    def clear_screen(self) -> None:
+        os.system("cls" if os.name == "nt" else "clear")
+
     def header(self, title: str) -> None:
         print("\n" + "=" * 64)
         print(title)
         print("=" * 64)
 
+    def screen(self, title: str) -> None:
+        self.clear_screen()
+        self.header(title)
+
     def pause(self) -> None:
         input("\n" + self.t("press_enter"))
+
+    def check_for_updates_silent(self) -> bool:
+        try:
+            subprocess.run(
+                ["git", "fetch", "--quiet", "origin", "main"],
+                cwd=PROJECT_ROOT,
+                check=False,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+            local = subprocess.run(
+                ["git", "rev-parse", "HEAD"],
+                cwd=PROJECT_ROOT,
+                check=False,
+                text=True,
+                capture_output=True,
+            )
+            remote = subprocess.run(
+                ["git", "rev-parse", "origin/main"],
+                cwd=PROJECT_ROOT,
+                check=False,
+                text=True,
+                capture_output=True,
+            )
+        except FileNotFoundError:
+            return False
+        if local.returncode != 0 or remote.returncode != 0:
+            return False
+        return local.stdout.strip() != remote.stdout.strip()
 
     def prompt_yes_no(self, msg: str, default_yes: bool = True) -> bool:
         suffix = self.t("yes_no_default_yes") if default_yes else self.t("yes_no_default_no")
@@ -103,7 +140,7 @@ class UI:
         return f"{value:.1f}TB"
 
     def select_language(self) -> None:
-        self.header(self.t("select_language_title"))
+        self.screen(self.t("select_language_title"))
         print(self.t("select_language_intro", app=APP_NAME) + "\n")
         codes = list(LANGUAGES.keys())
         for idx, code in enumerate(codes, start=1):
@@ -216,7 +253,7 @@ class UI:
         return False
 
     def setup_wizard(self) -> None:
-        self.header(self.t("setup_title"))
+        self.screen(self.t("setup_title"))
         print(self.t("setup_intro_1"))
         print(self.t("setup_intro_2"))
         self.cfg["media_base"] = detect_media_base(self.cfg.get("media_base"))
@@ -256,7 +293,7 @@ class UI:
         return ", ".join(items) if items else self.t("none")
 
     def print_report(self, records: List, summary: Dict) -> None:
-        self.header(self.t("preview_title"))
+        self.screen(self.t("preview_title"))
         self.print_config_summary()
         print("\n" + self.t("summary"))
         print("  " + self.t("media_analyzed", count=summary["total_files"], size=self.human_size(summary["total_size"])))
@@ -290,7 +327,7 @@ class UI:
                 print(f"  {idx}) {self.human_size(rec.size)} | {rec.age_days} {self.t('days_word')} | {action} | {rec.rel_path}")
 
     def run_cleanup_flow(self) -> None:
-        self.header(self.t("cleanup_title"))
+        self.screen(self.t("cleanup_title"))
         if not self.validate_current_config():
             return
         if self.prompt_yes_no(self.t("review_filters_before_scan"), default_yes=True):
@@ -339,7 +376,7 @@ class UI:
         self.pause()
 
     def run_restore_flow(self) -> None:
-        self.header(self.t("restore_title"))
+        self.screen(self.t("restore_title"))
         logs = list_available_logs()
         if not logs:
             print(self.t("no_records"))
@@ -359,7 +396,7 @@ class UI:
             return
 
         restorable, skipped = preview_restore_from_log(logs[choice - 1])
-        self.header(self.t("restore_preview_title"))
+        self.screen(self.t("restore_preview_title"))
         print(self.t("can_restore", count=len(restorable)))
         print(self.t("cannot_restore", count=len(skipped)))
         for idx, item in enumerate(restorable[:20], start=1):
@@ -383,7 +420,7 @@ class UI:
         self.pause()
 
     def run_update_flow(self) -> None:
-        self.header(self.t("update_title"))
+        self.screen(self.t("update_title"))
         print(self.t("update_intro"))
         if not self.prompt_yes_no(self.t("update_confirm"), default_yes=True):
             return
@@ -411,7 +448,7 @@ class UI:
 
     def run_settings_flow(self) -> None:
         while True:
-            self.header(self.t("settings_title"))
+            self.screen(self.t("settings_title"))
             self.print_config_summary()
             print(f"\n1) {self.t('menu_profile')}")
             print(f"2) {self.t('menu_ages')}")
@@ -441,7 +478,7 @@ class UI:
                 self.configure_cleanup_filters()
 
     def show_help(self) -> None:
-        self.header(self.t("help_title"))
+        self.screen(self.t("help_title"))
         for key in ("help_1", "help_2", "help_3", "help_4", "help_5"):
             print(self.t(key))
         self.pause()
@@ -451,9 +488,13 @@ class UI:
             self.select_language()
         if not self.cfg.get("setup_complete"):
             self.setup_wizard()
+        update_available = self.check_for_updates_silent()
 
         while True:
-            self.header(self.t("app_title", version=APP_VERSION))
+            self.screen(self.t("app_title", version=APP_VERSION))
+            if update_available:
+                print(self.t("update_available_notice"))
+                print()
             self.print_config_summary()
             print(f"\n1) {self.t('menu_analyze')}")
             print(f"2) {self.t('menu_settings')}")
@@ -471,6 +512,7 @@ class UI:
                 self.run_restore_flow()
             elif choice == "4":
                 self.run_update_flow()
+                update_available = self.check_for_updates_silent()
             elif choice == "5":
                 self.show_help()
             elif choice == "0":

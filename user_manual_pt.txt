@@ -32,6 +32,12 @@ Atualize para a versão mais recente:
 
 2. INSTALAR O ATALHO
 --------------------
+Instalação rápida pelo Termux:
+
+    pkg update && pkg install -y curl && curl -fsSL https://raw.githubusercontent.com/danisaia/clean_whatsapp/main/install.sh | bash
+
+Instalação manual do atalho:
+
 Rode este comando uma vez dentro da pasta do projeto:
 
     bash install-shortcut.sh

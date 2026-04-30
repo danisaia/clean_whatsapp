@@ -10,4 +10,6 @@
 - Added user manuals in four languages.
 - Added safety tests for invalid folders, permission errors, invalid config, removed files, and missing trash files.
 - Added MIT license file.
-
+- Added a one-line Termux installer.
+- Added terminal screen clearing in the main screens to keep the interface easier to read.
+- Added a silent startup update check after the first setup.

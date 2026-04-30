@@ -142,6 +142,7 @@
   "update_git_missing": "Git est introuvable. Dans Termux, exécutez : pkg install git",
   "update_done": "Mise à jour terminée.",
   "update_failed": "La mise à jour a échoué avec le code {code}.",
+  "update_available_notice": "Une nouvelle version est disponible. Choisissez 'Mettre à jour Clean WhatsApp' pour mettre à jour.",
   "help_title": "Aide rapide",
   "help_1": "1. Utilisez d'abord 'Analyser et nettoyer' pour voir l'aperçu.",
   "help_2": "2. Les fichiers dans 'Déplacer vers la corbeille' quittent le dossier WhatsApp, mais peuvent être restaurés depuis le menu.",

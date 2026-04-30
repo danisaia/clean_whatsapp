@@ -32,6 +32,12 @@ Update to the latest version:
 
 2. INSTALL THE SHORTCUT
 -----------------------
+Quick install from Termux:
+
+    pkg update && pkg install -y curl && curl -fsSL https://raw.githubusercontent.com/danisaia/clean_whatsapp/main/install.sh | bash
+
+Manual shortcut install:
+
 Run this command once from the project folder:
 
     bash install-shortcut.sh

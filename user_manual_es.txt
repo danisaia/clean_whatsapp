@@ -32,6 +32,12 @@ Actualiza a la versión más reciente:
 
 2. INSTALAR EL ACCESO DIRECTO
 -----------------------------
+Instalación rápida desde Termux:
+
+    pkg update && pkg install -y curl && curl -fsSL https://raw.githubusercontent.com/danisaia/clean_whatsapp/main/install.sh | bash
+
+Instalación manual del acceso directo:
+
 Ejecuta este comando una vez dentro de la carpeta del proyecto:
 
     bash install-shortcut.sh
