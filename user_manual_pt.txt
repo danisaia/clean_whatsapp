@@ -1,0 +1,117 @@
+CLEAN WHATSAPP
+Manual rápido do usuário
+========================
+
+O Clean WhatsApp ajuda a liberar espaço no celular limpando mídias antigas do
+WhatsApp pelo Termux. O app sempre mostra uma prévia antes de mexer nos
+arquivos. Nada é apagado sem confirmação.
+
+
+CONTEÚDO
+--------
+1. Atualizar o app
+2. Instalar o atalho
+3. Primeira configuração
+4. Limpar mídias antigas
+5. Lixeira e restauração
+6. Alterar configurações
+7. Problemas de permissão
+8. Dica de segurança
+
+
+1. ATUALIZAR O APP
+------------------
+Abra o Termux e entre na pasta do projeto:
+
+    cd clean_whatsapp
+
+Atualize para a versão mais recente:
+
+    git pull origin main
+
+
+2. INSTALAR O ATALHO
+--------------------
+Rode este comando uma vez dentro da pasta do projeto:
+
+    bash install-shortcut.sh
+
+Depois disso, abra o app de qualquer pasta com:
+
+    clean-whatsapp
+
+Se não quiser instalar o atalho, abra pela pasta do projeto:
+
+    ./clean-whatsapp
+
+
+3. PRIMEIRA CONFIGURAÇÃO
+------------------------
+Na primeira vez, o app vai perguntar:
+
+- Qual idioma você quer usar.
+- Qual pasta do WhatsApp deve ser usada.
+- Qual perfil de limpeza você prefere.
+- Se deve incluir mídias enviadas.
+- Se deve incluir mídias ocultas.
+
+Para começar com segurança, escolha o perfil Seguro.
+
+
+4. LIMPAR MÍDIAS ANTIGAS
+------------------------
+No menu principal, escolha:
+
+    1) Analisar e limpar
+
+O app mostra uma prévia com:
+
+- Arquivos que serão mantidos.
+- Arquivos que podem ir para a lixeira.
+- Arquivos que podem ser apagados definitivamente.
+- Quanto espaço está envolvido.
+- Quais são os maiores arquivos encontrados.
+
+Leia a prévia com calma. Depois escolha se deseja aplicar a limpeza.
+
+
+5. LIXEIRA E RESTAURAÇÃO
+------------------------
+Arquivos movidos para a lixeira podem ser restaurados depois.
+
+Para restaurar, escolha:
+
+    3) Restaurar arquivos da lixeira
+
+Arquivos apagados definitivamente não podem ser restaurados pelo app.
+
+
+6. ALTERAR CONFIGURAÇÕES
+------------------------
+Para mudar as regras de limpeza ou as pastas incluídas, escolha:
+
+    2) Configurações
+
+Você pode:
+
+- Trocar o perfil de limpeza.
+- Editar os dias manualmente.
+- Incluir ou remover mídias enviadas.
+- Incluir ou remover mídias ocultas.
+- Corrigir o caminho da pasta do WhatsApp.
+- Alterar o idioma do app.
+
+
+7. PROBLEMAS DE PERMISSÃO
+-------------------------
+Se o app não conseguir acessar o armazenamento, rode:
+
+    termux-setup-storage
+
+Depois feche e abra o Termux novamente.
+
+
+8. DICA DE SEGURANÇA
+--------------------
+Na dúvida, não apague definitivamente. Mova para a lixeira primeiro e restaure
+depois se precisar.

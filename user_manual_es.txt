@@ -1,0 +1,118 @@
+CLEAN WHATSAPP
+Manual rápido de usuario
+========================
+
+Clean WhatsApp ayuda a liberar espacio en el teléfono limpiando medios antiguos
+de WhatsApp desde Termux. La app siempre muestra una vista previa antes de
+cambiar archivos. Nada se borra sin confirmación.
+
+
+CONTENIDO
+---------
+1. Actualizar la app
+2. Instalar el acceso directo
+3. Primera configuración
+4. Limpiar medios antiguos
+5. Papelera y restauración
+6. Cambiar ajustes
+7. Problemas de permiso
+8. Consejo de seguridad
+
+
+1. ACTUALIZAR LA APP
+--------------------
+Abre Termux y entra en la carpeta del proyecto:
+
+    cd clean_whatsapp
+
+Actualiza a la versión más reciente:
+
+    git pull origin main
+
+
+2. INSTALAR EL ACCESO DIRECTO
+-----------------------------
+Ejecuta este comando una vez dentro de la carpeta del proyecto:
+
+    bash install-shortcut.sh
+
+Después, abre la app desde cualquier carpeta con:
+
+    clean-whatsapp
+
+Si no quieres instalar el acceso directo, abre la app desde la carpeta del
+proyecto:
+
+    ./clean-whatsapp
+
+
+3. PRIMERA CONFIGURACIÓN
+------------------------
+La primera vez, la app preguntará:
+
+- Qué idioma quieres usar.
+- Qué carpeta de WhatsApp debe usarse.
+- Qué perfil de limpieza prefieres.
+- Si debe incluir medios enviados.
+- Si debe incluir medios ocultos.
+
+Para empezar con más seguridad, elige el perfil Seguro.
+
+
+4. LIMPIAR MEDIOS ANTIGUOS
+--------------------------
+En el menú principal, elige:
+
+    1) Analizar y limpiar
+
+La app muestra una vista previa con:
+
+- Archivos que se conservarán.
+- Archivos que pueden ir a la papelera.
+- Archivos que pueden borrarse definitivamente.
+- Cuánto espacio está involucrado.
+- Los archivos más grandes encontrados.
+
+Lee la vista previa con calma. Después elige si quieres aplicar la limpieza.
+
+
+5. PAPELERA Y RESTAURACIÓN
+--------------------------
+Los archivos movidos a la papelera pueden restaurarse después.
+
+Para restaurar, elige:
+
+    3) Restaurar archivos de la papelera
+
+Los archivos borrados definitivamente no pueden restaurarse con esta app.
+
+
+6. CAMBIAR AJUSTES
+------------------
+Para cambiar las reglas de limpieza o las carpetas incluidas, elige:
+
+    2) Ajustes
+
+Puedes:
+
+- Cambiar el perfil de limpieza.
+- Editar los días manualmente.
+- Incluir o excluir medios enviados.
+- Incluir o excluir medios ocultos.
+- Cambiar la carpeta de WhatsApp.
+- Cambiar el idioma de la app.
+
+
+7. PROBLEMAS DE PERMISO
+-----------------------
+Si la app no puede acceder al almacenamiento, ejecuta:
+
+    termux-setup-storage
+
+Después cierra y vuelve a abrir Termux.
+
+
+8. CONSEJO DE SEGURIDAD
+-----------------------
+Si tienes dudas, no borres definitivamente. Mueve los archivos a la papelera
+primero y restáuralos después si hace falta.

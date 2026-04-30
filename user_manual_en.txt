@@ -1,0 +1,117 @@
+CLEAN WHATSAPP
+Quick User Manual
+=================
+
+Clean WhatsApp helps free up phone storage by cleaning old WhatsApp media in
+Termux. The app always shows a preview before changing files. Nothing is
+deleted without confirmation.
+
+
+CONTENTS
+--------
+1. Update the app
+2. Install the shortcut
+3. First setup
+4. Clean old media
+5. Trash and restore
+6. Change settings
+7. Permission problems
+8. Safety tip
+
+
+1. UPDATE THE APP
+-----------------
+Open Termux and enter the project folder:
+
+    cd clean_whatsapp
+
+Update to the latest version:
+
+    git pull origin main
+
+
+2. INSTALL THE SHORTCUT
+-----------------------
+Run this command once from the project folder:
+
+    bash install-shortcut.sh
+
+After that, open the app from any folder with:
+
+    clean-whatsapp
+
+If you do not want to install the shortcut, open it from the project folder:
+
+    ./clean-whatsapp
+
+
+3. FIRST SETUP
+--------------
+On first launch, the app asks:
+
+- Which language you want to use.
+- Which WhatsApp folder should be used.
+- Which cleanup profile you prefer.
+- Whether to include sent media.
+- Whether to include hidden media.
+
+For a safer start, choose the Safe profile.
+
+
+4. CLEAN OLD MEDIA
+------------------
+In the main menu, choose:
+
+    1) Analyze and clean
+
+The app shows a preview with:
+
+- Files that will be kept.
+- Files that can go to trash.
+- Files that can be deleted permanently.
+- How much space is involved.
+- The largest files found.
+
+Read the preview carefully. Then choose whether to apply the cleanup.
+
+
+5. TRASH AND RESTORE
+--------------------
+Files moved to trash can be restored later.
+
+To restore, choose:
+
+    3) Restore files from trash
+
+Files deleted permanently cannot be restored by this app.
+
+
+6. CHANGE SETTINGS
+------------------
+To change cleanup rules or included folders, choose:
+
+    2) Settings
+
+You can:
+
+- Change the cleanup profile.
+- Edit the day limits manually.
+- Include or exclude sent media.
+- Include or exclude hidden media.
+- Change the WhatsApp folder.
+- Change the app language.
+
+
+7. PERMISSION PROBLEMS
+----------------------
+If the app cannot access storage, run:
+
+    termux-setup-storage
+
+Then close and reopen Termux.
+
+
+8. SAFETY TIP
+-------------
+When in doubt, do not delete permanently. Move files to trash first and
+restore them later if needed.

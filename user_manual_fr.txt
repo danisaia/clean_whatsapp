@@ -1,0 +1,120 @@
+CLEAN WHATSAPP
+Guide rapide utilisateur
+========================
+
+Clean WhatsApp aide à libérer de l'espace sur le téléphone en nettoyant les
+anciens médias WhatsApp avec Termux. L'app affiche toujours un aperçu avant de
+modifier les fichiers. Rien n'est supprimé sans confirmation.
+
+
+SOMMAIRE
+--------
+1. Mettre l'app à jour
+2. Installer le raccourci
+3. Première configuration
+4. Nettoyer les anciens médias
+5. Corbeille et restauration
+6. Modifier les paramètres
+7. Problèmes d'autorisation
+8. Conseil de sécurité
+
+
+1. METTRE L'APP À JOUR
+----------------------
+Ouvrez Termux et entrez dans le dossier du projet :
+
+    cd clean_whatsapp
+
+Mettez à jour vers la version la plus récente :
+
+    git pull origin main
+
+
+2. INSTALLER LE RACCOURCI
+-------------------------
+Exécutez cette commande une fois depuis le dossier du projet :
+
+    bash install-shortcut.sh
+
+Ensuite, ouvrez l'app depuis n'importe quel dossier avec :
+
+    clean-whatsapp
+
+Si vous ne voulez pas installer le raccourci, ouvrez l'app depuis le dossier du
+projet :
+
+    ./clean-whatsapp
+
+
+3. PREMIÈRE CONFIGURATION
+-------------------------
+Au premier lancement, l'app demandera :
+
+- Quelle langue vous voulez utiliser.
+- Quel dossier WhatsApp doit être utilisé.
+- Quel profil de nettoyage vous préférez.
+- S'il faut inclure les médias envoyés.
+- S'il faut inclure les médias cachés.
+
+Pour commencer prudemment, choisissez le profil Sûr.
+
+
+4. NETTOYER LES ANCIENS MÉDIAS
+------------------------------
+Dans le menu principal, choisissez :
+
+    1) Analyser et nettoyer
+
+L'app affiche un aperçu avec :
+
+- Les fichiers qui seront gardés.
+- Les fichiers qui peuvent aller à la corbeille.
+- Les fichiers qui peuvent être supprimés définitivement.
+- L'espace concerné.
+- Les plus gros fichiers trouvés.
+
+Lisez l'aperçu calmement. Ensuite, choisissez si vous voulez appliquer le
+nettoyage.
+
+
+5. CORBEILLE ET RESTAURATION
+----------------------------
+Les fichiers déplacés vers la corbeille peuvent être restaurés plus tard.
+
+Pour restaurer, choisissez :
+
+    3) Restaurer les fichiers de la corbeille
+
+Les fichiers supprimés définitivement ne peuvent pas être restaurés par cette
+app.
+
+
+6. MODIFIER LES PARAMÈTRES
+--------------------------
+Pour changer les règles de nettoyage ou les dossiers inclus, choisissez :
+
+    2) Paramètres
+
+Vous pouvez :
+
+- Changer le profil de nettoyage.
+- Modifier les jours manuellement.
+- Inclure ou exclure les médias envoyés.
+- Inclure ou exclure les médias cachés.
+- Changer le dossier WhatsApp.
+- Changer la langue de l'app.
+
+
+7. PROBLÈMES D'AUTORISATION
+---------------------------
+Si l'app ne peut pas accéder au stockage, exécutez :
+
+    termux-setup-storage
+
+Puis fermez et rouvrez Termux.
+
+
+8. CONSEIL DE SÉCURITÉ
+----------------------
+En cas de doute, ne supprimez pas définitivement. Déplacez d'abord les fichiers
+vers la corbeille et restaurez-les plus tard si nécessaire.

@@ -1,18 +1,30 @@
-# Limpador de mídia do WhatsApp para Termux
+# Clean WhatsApp for Termux
 
-Este projeto é um app simples de terminal para Android/Termux que ajuda a liberar espaço removendo mídias antigas do WhatsApp com prévia, confirmação e possibilidade de restauração dos arquivos movidos para a lixeira.
+Clean WhatsApp is a simple Termux app for Android that helps free up phone storage by cleaning old WhatsApp media.
 
-Ele foi pensado para ser conservador:
+It is designed for regular users:
 
-- Mostra uma prévia antes de alterar qualquer arquivo.
-- Usa perfis de limpeza fáceis de entender.
-- Move arquivos antigos para uma lixeira antes de apagar definitivamente, quando configurado.
-- Só apaga definitivamente após confirmação explícita digitando `APAGAR`.
-- Gera registros para restaurar arquivos que foram movidos para a lixeira.
+- It shows a preview before changing any file.
+- It uses simple cleanup profiles.
+- It can move old files to a trash folder before permanent deletion.
+- Permanent deletion requires an explicit confirmation word.
+- It keeps operation records so files moved to trash can be restored.
+- The interface supports English, Portuguese, Spanish, and French.
 
-## Onde ele procura as mídias
+## Supported languages
 
-O app tenta detectar automaticamente pastas comuns:
+On first launch, the app asks the user to choose a language:
+
+- English
+- Portuguese - Brazil
+- Spanish
+- French
+
+The language can be changed later in `Settings > Change language`.
+
+## Where it looks for WhatsApp media
+
+The app tries to detect common WhatsApp folders:
 
 ```text
 /storage/emulated/0/Android/media/com.whatsapp/WhatsApp/Media
@@ -20,151 +32,162 @@ O app tenta detectar automaticamente pastas comuns:
 /storage/emulated/0/WhatsApp/Media
 ```
 
-Se o seu celular usar outro caminho, você pode alterar isso pelo menu `Configurações`.
+If your phone uses another folder, change it from the app settings.
 
-## Instalação no Termux
+## Install or update in Termux
 
-1. Instale o Termux.
+1. Open Termux.
 
-2. Abra o Termux e conceda acesso ao armazenamento:
+2. Allow storage access:
 
 ```bash
 termux-setup-storage
 ```
 
-3. Instale Python e Git, se necessário:
+3. Install Python and Git if needed:
 
 ```bash
 pkg update
 pkg install python git
 ```
 
-4. Baixe ou copie este projeto para o Termux.
+4. Clone the repository:
 
-5. Rode o app:
+```bash
+git clone https://github.com/danisaia/clean_whatsapp.git
+```
+
+5. Enter the project folder:
+
+```bash
+cd clean_whatsapp
+```
+
+6. Run the app:
 
 ```bash
 python3 scripts/clean_whatsapp.py
 ```
 
-Na primeira execução, o app abre um assistente para escolher a pasta do WhatsApp, o perfil de limpeza e quais pastas devem ser incluídas.
-
-## Abrir sem digitar o comando completo
-
-Depois de atualizar ou instalar o projeto, entre na pasta dele e rode uma vez:
+If you already cloned the project before, update it with:
 
 ```bash
-bash instalar-atalho.sh
+cd clean_whatsapp
+git pull origin main
 ```
 
-Depois disso, você poderá abrir o app de qualquer pasta digitando apenas:
+## Start with a shorter command
+
+From the project folder, run once:
 
 ```bash
-limpar-whatsapp
+bash install-shortcut.sh
 ```
 
-Se preferir não instalar o atalho, também dá para abrir pela pasta do projeto assim:
+After that, open the app from any folder with:
 
 ```bash
-./limpar-whatsapp
+clean-whatsapp
 ```
 
-Se aparecer "Permission denied" ao usar `./limpar-whatsapp`, rode:
+If you prefer not to install the shortcut, run it from the project folder:
 
 ```bash
-chmod +x limpar-whatsapp instalar-atalho.sh
+./clean-whatsapp
 ```
 
-## Como usar
+If `./clean-whatsapp` shows `Permission denied`, run:
 
-No menu principal:
+```bash
+chmod +x clean-whatsapp install-shortcut.sh
+```
+
+## Main menu
 
 ```text
-1) Analisar e limpar
-2) Configurações
-3) Restaurar arquivos da lixeira
-4) Ajuda
-0) Sair
+1) Analyze and clean
+2) Settings
+3) Restore files from trash
+4) Help
+0) Exit
 ```
 
-Use primeiro `Analisar e limpar`. O app vai mostrar:
+Start with `Analyze and clean`. The app will show:
 
-- Quantos arquivos serão mantidos.
-- Quantos podem ser movidos para a lixeira.
-- Quantos podem ser apagados definitivamente.
-- O tamanho total por ação.
-- Os maiores arquivos candidatos à limpeza.
+- Files that will be kept.
+- Files that can be moved to trash.
+- Files that can be deleted permanently.
+- The amount of storage involved.
+- The largest cleanup candidates.
 
-Depois da prévia, você escolhe se quer aplicar ou não.
+After the preview, the user chooses whether to apply the cleanup.
 
-## Perfis de limpeza
+## Cleanup profiles
 
-Você pode escolher um perfil em `Configurações > Usar perfil de limpeza`:
+The app has three simple profiles:
 
-- `Seguro`: mantém 60 dias, move 61-180 dias para lixeira e só sugere apagar acima de 180 dias.
-- `Equilibrado`: mantém 30 dias, move 31-90 dias para lixeira e só sugere apagar acima de 90 dias.
-- `Liberar mais espaço`: mantém 14 dias, move 15-45 dias para lixeira e só sugere apagar acima de 45 dias.
+- `Safe`: keeps 60 days, moves 61 to 180 days to trash, and only suggests deleting above 180 days.
+- `Balanced`: keeps 30 days, moves 31 to 90 days to trash, and only suggests deleting above 90 days.
+- `Free more space`: keeps 14 days, moves 15 to 45 days to trash, and only suggests deleting above 45 days.
 
-Também existe modo personalizado para editar os dias manualmente.
+The user can also set custom day limits.
 
-## Pastas opcionais
+## Optional folders
 
-Em `Configurações > Escolher pastas incluídas`:
+In settings, the user can include or exclude:
 
-- `Sent`: mídias que você enviou para outras pessoas. Por padrão, fica incluída.
-- `Private`: mídias ocultas da galeria. Por segurança, fica desativada por padrão.
+- `Sent`: media sent to other people.
+- `Private`: media hidden from the gallery.
 
-## Restauração
+For safety, `Private` is disabled by default.
 
-Arquivos movidos para a lixeira podem ser restaurados pelo menu:
+## Restore
+
+Files moved to trash can be restored from:
 
 ```text
-3) Restaurar arquivos da lixeira
+3) Restore files from trash
 ```
 
-O app lista os registros disponíveis e mostra uma prévia antes de restaurar.
+Files deleted permanently cannot be restored by this app.
 
-Importante: arquivos apagados definitivamente não podem ser restaurados por este app.
+## Config and records
 
-## Arquivos de configuração e registros
-
-Configuração:
+Configuration:
 
 ```text
-~/.config/whatsapp_clean/config.json
+~/.config/clean-whatsapp/config.json
 ```
 
-Registros:
+Operation records:
 
 ```text
-~/.local/share/whatsapp_clean/logs/
+~/.local/share/clean-whatsapp/logs/
 ```
 
-Lixeira criada ao lado da pasta `Media` do WhatsApp:
+Trash folders are created next to the WhatsApp `Media` folder:
 
 ```text
-whatsapp_clean_trash_YYYYMMDD_HHMMSS
+clean_whatsapp_trash_YYYYMMDD_HHMMSS
 ```
 
-## Segurança
+## User manuals
 
-Antes de usar em arquivos importantes:
+Simple user manuals are available in four languages:
 
-- Rode a análise e leia a prévia.
-- Prefira o perfil `Seguro` na primeira execução.
-- Faça backup se houver mídias muito importantes.
-- Evite ativar `Private` sem entender o impacto.
+- `user_manual_en.txt`
+- `user_manual_pt.txt`
+- `user_manual_es.txt`
+- `user_manual_fr.txt`
 
-Em Android 11 ou superior, o acesso a algumas pastas pode variar conforme o aparelho e as permissões concedidas ao Termux.
-
-## Verificar sintaxe
+## Check syntax
 
 ```bash
 python3 -m py_compile scripts/clean_whatsapp.py
 ```
 
-## Licença
+## License
 
-Distribuído sob a Licença MIT.
+MIT License.
 
-**Autor:** Daniel Ito Isaia
+**Author:** Daniel Ito Isaia

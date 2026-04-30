@@ -3,7 +3,7 @@ set -e
 
 APP_DIR="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
 BIN_DIR="${PREFIX:-/data/data/com.termux/files/usr}/bin"
-COMMAND_PATH="$BIN_DIR/limpar-whatsapp"
+COMMAND_PATH="$BIN_DIR/clean-whatsapp"
 
 mkdir -p "$BIN_DIR"
 
@@ -16,7 +16,7 @@ EOF
 
 chmod +x "$COMMAND_PATH"
 
-echo "Atalho instalado com sucesso."
-echo "Agora você pode abrir o app digitando:"
+echo "Shortcut installed successfully."
+echo "You can now open the app by typing:"
 echo
-echo "  limpar-whatsapp"
+echo "  clean-whatsapp"
