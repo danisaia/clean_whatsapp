@@ -16,7 +16,23 @@ EOF
 
 chmod +x "$COMMAND_PATH"
 
-echo "Shortcut installed successfully."
-echo "You can now open the app by typing:"
+case "${LANG:-en}" in
+  pt*|PT*)
+    echo "Atalho do Clean WhatsApp instalado com sucesso."
+    echo "Agora você pode abrir o Clean WhatsApp digitando:"
+    ;;
+  es*|ES*)
+    echo "Acceso directo de Clean WhatsApp instalado correctamente."
+    echo "Ahora puedes abrir Clean WhatsApp escribiendo:"
+    ;;
+  fr*|FR*)
+    echo "Raccourci Clean WhatsApp installé avec succès."
+    echo "Vous pouvez maintenant ouvrir Clean WhatsApp en tapant :"
+    ;;
+  *)
+    echo "Clean WhatsApp shortcut installed successfully."
+    echo "You can now open Clean WhatsApp by typing:"
+    ;;
+esac
 echo
 echo "  clean-whatsapp"

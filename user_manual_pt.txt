@@ -69,8 +69,12 @@ O app mostra uma prévia com:
 - Arquivos que serão mantidos.
 - Arquivos que podem ir para a lixeira.
 - Arquivos que podem ser apagados definitivamente.
-- Quanto espaço está envolvido.
+- Quanto espaço pode ser liberado.
+- Uma prévia separada por categoria de mídia.
 - Quais são os maiores arquivos encontrados.
+
+Antes da análise, você pode escolher filtros para imagens, vídeos, áudios,
+figurinhas, mídias enviadas e mídias ocultas.
 
 Leia a prévia com calma. Depois escolha se deseja aplicar a limpeza.
 

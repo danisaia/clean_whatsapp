@@ -1,3 +1,4 @@
 *.sh text eol=lf
 *.txt text eol=lf
+*.json text eol=lf
 clean-whatsapp text eol=lf

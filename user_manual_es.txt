@@ -70,8 +70,12 @@ La app muestra una vista previa con:
 - Archivos que se conservarán.
 - Archivos que pueden ir a la papelera.
 - Archivos que pueden borrarse definitivamente.
-- Cuánto espacio está involucrado.
+- Cuánto espacio se puede liberar.
+- Una vista previa separada por categoría de medio.
 - Los archivos más grandes encontrados.
+
+Antes del análisis, puedes elegir filtros para imágenes, videos, audios,
+stickers, medios enviados y medios ocultos.
 
 Lee la vista previa con calma. Después elige si quieres aplicar la limpieza.
 

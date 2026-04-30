@@ -1,4 +1,4 @@
-# Clean WhatsApp for Termux
+# Clean WhatsApp 1.0.0 for Termux
 
 Clean WhatsApp is a simple Termux app for Android that helps free up phone storage by cleaning old WhatsApp media.
 
@@ -10,6 +10,9 @@ It is designed for regular users:
 - Permanent deletion requires an explicit confirmation word.
 - It keeps operation records so files moved to trash can be restored.
 - The interface supports English, Portuguese, Spanish, and French.
+- It can update itself from the main menu when installed from Git.
+- It shows how much storage can be freed before applying cleanup.
+- It lets users filter images, videos, audio, stickers, sent media, and hidden media before scanning.
 
 ## Supported languages
 
@@ -108,7 +111,8 @@ chmod +x clean-whatsapp install-shortcut.sh
 1) Analyze and clean
 2) Settings
 3) Restore files from trash
-4) Help
+4) Update Clean WhatsApp
+5) Help
 0) Exit
 ```
 
@@ -117,7 +121,8 @@ Start with `Analyze and clean`. The app will show:
 - Files that will be kept.
 - Files that can be moved to trash.
 - Files that can be deleted permanently.
-- The amount of storage involved.
+- The amount of storage that can be freed.
+- A preview grouped by media category.
 - The largest cleanup candidates.
 
 After the preview, the user chooses whether to apply the cleanup.
@@ -180,10 +185,21 @@ Simple user manuals are available in four languages:
 - `user_manual_es.txt`
 - `user_manual_fr.txt`
 
+## Changelog and license
+
+- Changelog: `CHANGELOG.md`
+- License: `LICENSE`
+
 ## Check syntax
 
 ```bash
 python3 -m py_compile scripts/clean_whatsapp.py
+```
+
+## Run tests
+
+```bash
+python3 -m unittest
 ```
 
 ## License

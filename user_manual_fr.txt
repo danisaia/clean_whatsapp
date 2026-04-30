@@ -70,8 +70,12 @@ L'app affiche un aperçu avec :
 - Les fichiers qui seront gardés.
 - Les fichiers qui peuvent aller à la corbeille.
 - Les fichiers qui peuvent être supprimés définitivement.
-- L'espace concerné.
+- L'espace qui peut être libéré.
+- Un aperçu séparé par catégorie de média.
 - Les plus gros fichiers trouvés.
+
+Avant l'analyse, vous pouvez choisir des filtres pour les images, vidéos,
+audios, stickers, médias envoyés et médias cachés.
 
 Lisez l'aperçu calmement. Ensuite, choisissez si vous voulez appliquer le
 nettoyage.

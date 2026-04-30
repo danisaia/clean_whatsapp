@@ -69,8 +69,12 @@ The app shows a preview with:
 - Files that will be kept.
 - Files that can go to trash.
 - Files that can be deleted permanently.
-- How much space is involved.
+- How much space can be freed.
+- A preview grouped by media category.
 - The largest files found.
+
+Before scanning, you can choose filters for images, videos, audio, stickers,
+sent media, and hidden media.
 
 Read the preview carefully. Then choose whether to apply the cleanup.
 

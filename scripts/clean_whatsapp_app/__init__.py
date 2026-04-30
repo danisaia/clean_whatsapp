@@ -1,0 +1,2 @@
+"""Clean WhatsApp application package."""
+
