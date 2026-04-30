@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+set -e
+
+APP_DIR="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
+exec python3 "$APP_DIR/scripts/clean_whatsapp.py" "$@"

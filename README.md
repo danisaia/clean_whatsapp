@@ -49,6 +49,32 @@ python3 scripts/clean_whatsapp.py
 
 Na primeira execução, o app abre um assistente para escolher a pasta do WhatsApp, o perfil de limpeza e quais pastas devem ser incluídas.
 
+## Abrir sem digitar o comando completo
+
+Depois de atualizar ou instalar o projeto, entre na pasta dele e rode uma vez:
+
+```bash
+bash instalar-atalho.sh
+```
+
+Depois disso, você poderá abrir o app de qualquer pasta digitando apenas:
+
+```bash
+limpar-whatsapp
+```
+
+Se preferir não instalar o atalho, também dá para abrir pela pasta do projeto assim:
+
+```bash
+./limpar-whatsapp
+```
+
+Se aparecer "Permission denied" ao usar `./limpar-whatsapp`, rode:
+
+```bash
+chmod +x limpar-whatsapp instalar-atalho.sh
+```
+
 ## Como usar
 
 No menu principal:
