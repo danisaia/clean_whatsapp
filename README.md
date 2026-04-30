@@ -1,113 +1,144 @@
-# Limpador de Mídia do WhatsApp (Termux)
+# Limpador de mídia do WhatsApp para Termux
 
-Este repositório contém uma ferramenta em Python para Termux que analisa e ajuda a limpar mídias antigas do WhatsApp em:
+Este projeto é um app simples de terminal para Android/Termux que ajuda a liberar espaço removendo mídias antigas do WhatsApp com prévia, confirmação e possibilidade de restauração dos arquivos movidos para a lixeira.
 
-`/storage/emulated/0/Android/media/com.whatsapp/WhatsApp/Media`
+Ele foi pensado para ser conservador:
 
-Resumo das funcionalidades
-- Análise por idade com relatório (modo simulação / dry-run por padrão).
-- Política de retenção por idade configurável (padrões: manter até X dias, mover entre Y–Z dias para Trash, excluir acima de Z dias com confirmação forte).
-- Movimentação para uma Lixeira timestamped (pasta `whatsapp_clean_trash_YYYYMMDD_HHMMSS`).
-- Exclusões permanentes somente após confirmação explícita (digitar `YES`).
-- Geração de logs JSON com `entries` e `meta` para permitir restauração.
-- Pré-visualização de restauração: lista entradas recuperáveis a partir de um log antes de executar a restauração.
-- Filtragem por pasta/extension mapping (detecta pastas tipo "WhatsApp Images", "WhatsApp Video" etc. usando correspondência por substring) e fallback para uma whitelist global de extensões.
+- Mostra uma prévia antes de alterar qualquer arquivo.
+- Usa perfis de limpeza fáceis de entender.
+- Move arquivos antigos para uma lixeira antes de apagar definitivamente, quando configurado.
+- Só apaga definitivamente após confirmação explícita digitando `APAGAR`.
+- Gera registros para restaurar arquivos que foram movidos para a lixeira.
 
-Requisitos
-- Python 3.10 ou superior (o script usa anotações e sintaxe modernas). Verifique com:
+## Onde ele procura as mídias
 
-```powershell
-python3 --version
+O app tenta detectar automaticamente pastas comuns:
+
+```text
+/storage/emulated/0/Android/media/com.whatsapp/WhatsApp/Media
+/storage/emulated/0/Android/media/com.whatsapp.w4b/WhatsApp Business/Media
+/storage/emulated/0/WhatsApp/Media
 ```
 
-Ambiente Termux (pré-requisitos)
-1. Abra o Termux.
-2. Conceda permissão de armazenamento (necessário para acessar `/storage`):
+Se o seu celular usar outro caminho, você pode alterar isso pelo menu `Configurações`.
 
-```powershell
+## Instalação no Termux
+
+1. Instale o Termux.
+
+2. Abra o Termux e conceda acesso ao armazenamento:
+
+```bash
 termux-setup-storage
 ```
 
-3. Instale o Python (se necessário):
+3. Instale Python e Git, se necessário:
 
-```powershell
-pkg install python
+```bash
+pkg update
+pkg install python git
 ```
 
-Instalação do repositório
-- Copie o repositório para o diretório home do Termux (via `git clone`, `termux-share` ou `adb`).
+4. Baixe ou copie este projeto para o Termux.
 
-Como usar (fluxo básico)
-1. Executar em modo análise (dry-run, recomendado):
+5. Rode o app:
 
-```powershell
+```bash
 python3 scripts/clean_whatsapp.py
 ```
 
-- O menu interativo permitirá:
-	- Analisar e gerar relatório (sem alterações quando em dry-run).
-	- Ver estatísticas por faixa de idade e maiores arquivos.
-	- Escolher aplicar movimentações (mover arquivos entre Y–Z dias para Trash) e/ou exclusões (> Z dias) — os prompts mostram os valores atuais de configuração.
-	- Pré-visualizar restaurações a partir de logs antes de aplicar.
+Na primeira execução, o app abre um assistente para escolher a pasta do WhatsApp, o perfil de limpeza e quais pastas devem ser incluídas.
 
-2. Restauração a partir de log (menu):
-- A opção de restauração agora lista logs disponíveis em `~/.local/share/whatsapp_clean/logs/`, permite pré-visualizar quais entradas são restauráveis e executa a restauração somente após confirmação.
+## Como usar
 
-Arquivos de configuração e logs
-- Configuração persistente: `~/.config/whatsapp_clean/config.json` (valores como `age_keep_days`, `age_trash_min`, `age_trash_max`, `include_private`, `include_sent`, `auto_prune`).
-- Logs: `~/.local/share/whatsapp_clean/logs/` (arquivos JSON gerados por operações que moveram/excluíram itens).
+No menu principal:
 
-Política de segurança e comportamento seguro
-- Por padrão o script roda em dry-run: nada será movido/excluído até que o usuário confirme.
-- Exclusões permanentes exigem confirmação forte (digitar `YES`).
-- A varredura ignora nomes sensíveis (ex.: `.nomedia`) e arquivos sem extensão reconhecida.
-- A restauração só é possível para arquivos que foram movidos para a Lixeira (ou que ainda existam no `planned_dst`); deletes permanentes não são recuperáveis.
-
-Detecção de pastas e extensões
-- O script usa `EXTENSION_MAP` para mapear tipos de pasta para extensões permitidas (ex.: `images` → `jpg`, `png`, `webp`).
-- A detecção de pasta faz correspondência por substring nas partes do caminho (por exemplo, "WhatsApp Images" corresponde a `images`).
-- Se a pasta não for reconhecida, o script usa uma whitelist global (`GLOBAL_MEDIA_EXTS`).
-
-Boas práticas antes de executar
-- Sempre rode a análise (dry-run) primeiro e revise o relatório.
-- Faça backup de arquivos importantes antes de aplicar exclusões.
-- Em dispositivos com Android 11+ o acesso a certos caminhos pode ser restrito mesmo após `termux-setup-storage`.
-
-Comandos úteis
-- Verificar versão do Python:
-
-```powershell
-python3 --version
+```text
+1) Analisar e limpar
+2) Configurações
+3) Restaurar arquivos da lixeira
+4) Ajuda
+0) Sair
 ```
 
-- Conceder permissão em Termux:
+Use primeiro `Analisar e limpar`. O app vai mostrar:
 
-```powershell
-termux-setup-storage
+- Quantos arquivos serão mantidos.
+- Quantos podem ser movidos para a lixeira.
+- Quantos podem ser apagados definitivamente.
+- O tamanho total por ação.
+- Os maiores arquivos candidatos à limpeza.
+
+Depois da prévia, você escolhe se quer aplicar ou não.
+
+## Perfis de limpeza
+
+Você pode escolher um perfil em `Configurações > Usar perfil de limpeza`:
+
+- `Seguro`: mantém 60 dias, move 61-180 dias para lixeira e só sugere apagar acima de 180 dias.
+- `Equilibrado`: mantém 30 dias, move 31-90 dias para lixeira e só sugere apagar acima de 90 dias.
+- `Liberar mais espaço`: mantém 14 dias, move 15-45 dias para lixeira e só sugere apagar acima de 45 dias.
+
+Também existe modo personalizado para editar os dias manualmente.
+
+## Pastas opcionais
+
+Em `Configurações > Escolher pastas incluídas`:
+
+- `Sent`: mídias que você enviou para outras pessoas. Por padrão, fica incluída.
+- `Private`: mídias ocultas da galeria. Por segurança, fica desativada por padrão.
+
+## Restauração
+
+Arquivos movidos para a lixeira podem ser restaurados pelo menu:
+
+```text
+3) Restaurar arquivos da lixeira
 ```
 
-- Checar sintaxe do script (opcional):
+O app lista os registros disponíveis e mostra uma prévia antes de restaurar.
 
-```powershell
+Importante: arquivos apagados definitivamente não podem ser restaurados por este app.
+
+## Arquivos de configuração e registros
+
+Configuração:
+
+```text
+~/.config/whatsapp_clean/config.json
+```
+
+Registros:
+
+```text
+~/.local/share/whatsapp_clean/logs/
+```
+
+Lixeira criada ao lado da pasta `Media` do WhatsApp:
+
+```text
+whatsapp_clean_trash_YYYYMMDD_HHMMSS
+```
+
+## Segurança
+
+Antes de usar em arquivos importantes:
+
+- Rode a análise e leia a prévia.
+- Prefira o perfil `Seguro` na primeira execução.
+- Faça backup se houver mídias muito importantes.
+- Evite ativar `Private` sem entender o impacto.
+
+Em Android 11 ou superior, o acesso a algumas pastas pode variar conforme o aparelho e as permissões concedidas ao Termux.
+
+## Verificar sintaxe
+
+```bash
 python3 -m py_compile scripts/clean_whatsapp.py
 ```
 
-- Executar o script (modo interativo):
-
-```powershell
-python3 scripts/clean_whatsapp.py
-```
-
-Melhorias e próximos passos
-- Adicionar testes automatizados (pequeno harness que simula uma árvore de pastas do WhatsApp e valida `scan_files` / `perform_actions` em dry-run).
-- Registrar checksums nos logs para validação de integridade durante restauração (opcional).
-- Adicionar uma opção "safe-verbose" que liste arquivos ignorados e motivos antes da aplicação.
-
-Contato / contribuições
-- Pull requests e issues são bem-vindos. Para contribuições, siga as práticas padrão de git (branch por recurso, commits pequenos).
-
 ## Licença
 
-Este projeto é distribuído sob a **Licença MIT** - um software livre e de código aberto que permite uso, modificação e distribuição sem restrições. Você pode usar este código para qualquer finalidade, inclusive comercial, desde que mantenha os créditos originais. O software é fornecido "como está", sem garantias de qualquer tipo.
+Distribuído sob a Licença MIT.
 
 **Autor:** Daniel Ito Isaia

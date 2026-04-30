@@ -1,17 +1,11 @@
 #!/usr/bin/env python3
 """
-Interactive Termux-friendly WhatsApp media cleaner skeleton.
+Limpador de mídia do WhatsApp para Termux.
 
-Features implemented here (skeleton):
-- First-run storage permission check + persist to config
-- Scan WhatsApp Media folder and classify files by age (days)
-- Report counts and sizes per action (keep/move/delete)
-- Dry-run default; apply changes only after confirmation
-- Move files to a timestamped trash folder when moving
-- Write a JSON log for moved/deleted files to allow restore
-- Restore stub that can move files back using a log
-
-This is a conservative skeleton focused on clarity and safety.
+O foco deste script é ser seguro e compreensível para usuários que não estão
+acostumados com terminal: ele sempre mostra uma prévia antes de alterar
+arquivos, usa perfis de limpeza e mantém registros para restauração dos itens
+movidos para a lixeira.
 """
 from __future__ import annotations
 
@@ -20,562 +14,781 @@ import os
 import shutil
 import sys
 import time
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import List, Dict, Tuple
+from typing import Dict, Iterable, List, Tuple
 
 
-# Enforce minimum Python version used by this script
 if sys.version_info < (3, 10):
     sys.stderr.write(
-        "This script requires Python 3.10 or newer.\nPlease install a newer Python or run the script in Termux with Python 3.10+.\n"
+        "Este app precisa de Python 3.10 ou mais novo.\n"
+        "No Termux, rode: pkg install python\n"
     )
     sys.exit(1)
 
 
-MEDIA_BASE = '/storage/emulated/0/Android/media/com.whatsapp/WhatsApp/Media'
-CONFIG_PATH = os.path.expanduser('~/.config/whatsapp_clean/config.json')
-LOGS_DIR = os.path.expanduser('~/.local/share/whatsapp_clean/logs')
+KNOWN_MEDIA_BASES = [
+    "/storage/emulated/0/Android/media/com.whatsapp/WhatsApp/Media",
+    "/storage/emulated/0/Android/media/com.whatsapp.w4b/WhatsApp Business/Media",
+    "/storage/emulated/0/WhatsApp/Media",
+]
 
-# Defaults; can be overridden in config.json
+CONFIG_PATH = os.path.expanduser("~/.config/whatsapp_clean/config.json")
+LOGS_DIR = os.path.expanduser("~/.local/share/whatsapp_clean/logs")
+
 DEFAULTS = {
-    'age_keep_days': 30,
-    'age_trash_min': 31,
-    'age_trash_max': 60,
-    'auto_prune': False,
-    'include_private': False,
-    'include_sent': True,
+    "media_base": KNOWN_MEDIA_BASES[0],
+    "age_keep_days": 60,
+    "age_trash_min": 61,
+    "age_trash_max": 180,
+    "include_private": False,
+    "include_sent": True,
+    "show_top_files": 10,
+    "setup_complete": False,
 }
 
-# Files and extensions policy
-# Map folder keywords to allowed extensions (lowercase, without dot)
+PRESETS = {
+    "1": {
+        "name": "Seguro",
+        "description": "mantém 60 dias, move de 61 a 180 dias para a lixeira e só sugere apagar acima de 180 dias",
+        "age_keep_days": 60,
+        "age_trash_min": 61,
+        "age_trash_max": 180,
+    },
+    "2": {
+        "name": "Equilibrado",
+        "description": "mantém 30 dias, move de 31 a 90 dias para a lixeira e só sugere apagar acima de 90 dias",
+        "age_keep_days": 30,
+        "age_trash_min": 31,
+        "age_trash_max": 90,
+    },
+    "3": {
+        "name": "Liberar mais espaço",
+        "description": "mantém 14 dias, move de 15 a 45 dias para a lixeira e só sugere apagar acima de 45 dias",
+        "age_keep_days": 14,
+        "age_trash_min": 15,
+        "age_trash_max": 45,
+    },
+}
+
 EXTENSION_MAP = {
-    'images': {'jpg', 'jpeg', 'png', 'webp', 'heic'},
-    'animated_gifs': {'gif'},
-    'video': {'mp4', 'mkv', 'mov', '3gp', 'avi'},
-    'audio': {'mp3', 'm4a', 'opus', 'ogg', 'amr'},
-    'voice': {'opus', 'm4a', 'amr'},
-    'stickers': {'webp'},
-    'profile': {'jpg', 'jpeg', 'png', 'webp'},
+    "images": {"jpg", "jpeg", "png", "webp", "heic"},
+    "animated_gifs": {"gif"},
+    "video": {"mp4", "mkv", "mov", "3gp", "avi"},
+    "audio": {"mp3", "m4a", "opus", "ogg", "amr"},
+    "voice": {"opus", "m4a", "amr"},
+    "stickers": {"webp"},
+    "profile": {"jpg", "jpeg", "png", "webp"},
 }
 
-# Global accepted media extensions if folder is unrecognized
-GLOBAL_MEDIA_EXTS = set().union(*EXTENSION_MAP.values())
+MEDIA_LABELS = {
+    "images": "Imagens",
+    "animated_gifs": "GIFs",
+    "video": "Vídeos",
+    "audio": "Áudios",
+    "voice": "Mensagens de voz",
+    "stickers": "Figurinhas",
+    "profile": "Fotos de perfil",
+    "other": "Outras mídias",
+}
 
-# Names to never touch
-EXCLUDE_NAMES = {'.nomedia', 'desktop.ini', 'thumbs.db'}
+ACTION_LABELS = {
+    "keep": "Manter",
+    "trash": "Mover para lixeira",
+    "delete": "Apagar definitivamente",
+}
+
+GLOBAL_MEDIA_EXTS = set().union(*EXTENSION_MAP.values())
+EXCLUDE_NAMES = {".nomedia", "desktop.ini", "thumbs.db"}
 
 
 @dataclass
 class FileRecord:
     src: str
-    dst: str | None
+    rel_path: str
     size: int
     mtime: float
+    age_days: int
+    action: str
+    media_type: str
 
 
-def ensure_dirs():
+def ensure_dirs() -> None:
     Path(CONFIG_PATH).parent.mkdir(parents=True, exist_ok=True)
     Path(LOGS_DIR).mkdir(parents=True, exist_ok=True)
 
 
 def load_config() -> Dict:
-    cfg = {}
     try:
-        with open(CONFIG_PATH, 'r', encoding='utf-8') as f:
+        with open(CONFIG_PATH, "r", encoding="utf-8") as f:
             cfg = json.load(f)
     except FileNotFoundError:
         cfg = {}
-    # Ensure defaults are present
-    for k, v in DEFAULTS.items():
-        if k not in cfg:
-            cfg[k] = v
-    if 'has_storage_permission' not in cfg:
-        cfg['has_storage_permission'] = None
+    except json.JSONDecodeError:
+        cfg = {}
+
+    for key, value in DEFAULTS.items():
+        cfg.setdefault(key, value)
     return cfg
 
 
-def save_config(cfg: Dict):
+def save_config(cfg: Dict) -> None:
     ensure_dirs()
-    with open(CONFIG_PATH, 'w', encoding='utf-8') as f:
-        json.dump(cfg, f, indent=2)
+    data = {k: v for k, v in cfg.items() if not k.startswith("_")}
+    with open(CONFIG_PATH, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2, ensure_ascii=False)
 
 
-def check_storage_access() -> Tuple[bool, str]:
-    """Return (accessible, message)."""
-    if not os.path.exists(MEDIA_BASE):
-        return False, f"Path does not exist: {MEDIA_BASE}"
-    try:
-        # quick read access test
-        _ = os.listdir(MEDIA_BASE)
-        return True, "OK"
-    except PermissionError:
-        return False, "Permission denied when accessing storage."
-    except Exception as e:
-        return False, f"Error accessing storage: {e}"
+def header(title: str) -> None:
+    print("\n" + "=" * 64)
+    print(title)
+    print("=" * 64)
+
+
+def pause() -> None:
+    input("\nPressione Enter para continuar...")
 
 
 def prompt_yes_no(msg: str, default_yes: bool = True) -> bool:
-    yes = 'S' if default_yes else 's'
-    no = 'N' if default_yes else 'n'
-    prompt = f"{msg} [{yes}/{no}]: "
+    suffix = "S/n" if default_yes else "s/N"
     while True:
-        ans = input(prompt).strip()
-        if ans == '' and default_yes:
+        ans = input(f"{msg} [{suffix}]: ").strip().lower()
+        if ans == "":
+            return default_yes
+        if ans in ("s", "sim", "y", "yes"):
             return True
-        if ans == '' and not default_yes:
+        if ans in ("n", "nao", "não", "no"):
             return False
-        if ans.lower() in ('s', 'sim'):
-            return True
-        if ans.lower() in ('n', 'no', 'nao', 'não'):
-            return False
+        print("Responda com S para sim ou N para não.")
 
 
-def strong_confirm(msg: str) -> bool:
-    print(msg)
-    print("Type YES to confirm:")
-    ans = input('> ').strip()
-    return ans == 'YES'
+def prompt_choice(msg: str, choices: Iterable[str], default: str) -> str:
+    valid = set(choices)
+    while True:
+        ans = input(f"{msg} [{default}]: ").strip() or default
+        if ans in valid:
+            return ans
+        print("Opção inválida. Escolha uma das opções mostradas.")
 
 
-def first_run_permission_check(cfg: Dict) -> Dict:
-    # Only skip check if we previously recorded True.
-    if cfg.get('has_storage_permission') is True:
-        return cfg
-
-    print('Esta ferramenta precisa de acesso à pasta de mídia do WhatsApp dentro do Termux.')
-    ok, reason = check_storage_access()
-    if ok:
-        print('Acesso ao armazenamento disponível.')
-        cfg['has_storage_permission'] = True
-        save_config(cfg)
-        return cfg
-
-    print('Falha ao acessar o armazenamento:', reason)
-    print('Se estiver usando Termux, conceda acesso executando:')
-    print('  termux-setup-storage')
-    print('Em seguida, execute este script novamente.')
-    # perguntar se o usuário já concedeu permissão e deseja continuar
-    got_perm = prompt_yes_no('Você já concedeu permissão de armazenamento?', default_yes=False)
-    if got_perm:
-        ok2, reason2 = check_storage_access()
-        if ok2:
-            cfg['has_storage_permission'] = True
-            save_config(cfg)
-            return cfg
-        else:
-            print('Ainda não é possível acessar o armazenamento:', reason2)
-    print('Encerrando até que a permissão de armazenamento esteja disponível.')
-    sys.exit(1)
+def prompt_int(msg: str, default: int, min_value: int = 0) -> int:
+    while True:
+        raw = input(f"{msg} [{default}]: ").strip()
+        if raw == "":
+            return default
+        try:
+            value = int(raw)
+        except ValueError:
+            print("Digite um número inteiro.")
+            continue
+        if value < min_value:
+            print(f"Digite um número maior ou igual a {min_value}.")
+            continue
+        return value
 
 
-def scan_files(base: str, include_private: bool = False, include_sent: bool = True, cfg: Dict | None = None) -> Tuple[List[FileRecord], Dict[str, int]]:
-    now = time.time()
-    keep: List[FileRecord] = []
-    trash_candidates: List[FileRecord] = []
-    delete_candidates: List[FileRecord] = []
-    summary = {'total_files': 0, 'total_size': 0, 'ignored_files': 0}
-
-    # Load limits from config or defaults
-    if cfg is None:
-        cfg = load_config()
-    keep_d = cfg.get('age_keep_days', DEFAULTS['age_keep_days'])
-    trash_min = cfg.get('age_trash_min', DEFAULTS['age_trash_min'])
-    trash_max = cfg.get('age_trash_max', DEFAULTS['age_trash_max'])
-
-    base_path = Path(base)
-    for root, dirs, files in os.walk(base):
-        for fn in files:
-            path = os.path.join(root, fn)
-            try:
-                st = os.stat(path)
-            except FileNotFoundError:
-                continue
-            except PermissionError:
-                # skip files we can't access
-                continue
-
-            age_days = int((now - st.st_mtime) / 86400)
-            rec = FileRecord(src=path, dst=None, size=st.st_size, mtime=st.st_mtime)
-            summary['total_files'] += 1
-            summary['total_size'] += st.st_size
-
-            # normalize path parts for folder-based filters
-            rel = Path(path).relative_to(base_path) if base_path in Path(path).parents or Path(path) == base_path else Path(path)
-            parts = [p.lower() for p in rel.parts]
-            # Exclude certain filenames explicitly
-            name = Path(path).name.lower()
-            if name in EXCLUDE_NAMES or name.startswith('.'):
-                summary['ignored_files'] += 1
-                continue
-
-            # Extension whitelist: only consider known media extensions
-            ext = Path(path).suffix.lower().lstrip('.')
-            if ext == '':
-                summary['ignored_files'] += 1
-                continue
-
-            # Determine folder-based extension policy if possible
-            # Find a matching folder key from path parts (use EXTENSION_MAP keys)
-            # Melhor: detectar por substring em cada parte (ex.: "WhatsApp Images" contém "images")
-            folder_key = None
-            for k in EXTENSION_MAP.keys():
-                found = False
-                for p in parts:
-                    # normalize and check if the folder key appears as a whole or as substring
-                    if k == p or k in p:
-                        found = True
-                        break
-                if found:
-                    folder_key = k
-                    break
-
-            allowed_exts = None
-            if folder_key:
-                allowed_exts = EXTENSION_MAP.get(folder_key, set())
-            else:
-                # No recognized folder key; fall back to global media extensions
-                allowed_exts = GLOBAL_MEDIA_EXTS
-
-            if ext not in allowed_exts:
-                # extension not allowed for this folder (or not globally recognized)
-                summary['ignored_files'] += 1
-                continue
-
-            if not include_private and 'private' in parts:
-                # treat as keep (skip processing)
-                keep.append(rec)
-                continue
-            if not include_sent and 'sent' in parts:
-                keep.append(rec)
-                continue
-
-            if age_days <= keep_d:
-                keep.append(rec)
-            elif trash_min <= age_days <= trash_max:
-                trash_candidates.append(rec)
-            else:
-                delete_candidates.append(rec)
-
-    return keep + trash_candidates + delete_candidates, {'keep': len(keep), 'trash': len(trash_candidates), 'delete': len(delete_candidates), **summary}
+def strong_confirm(msg: str, word: str = "APAGAR") -> bool:
+    print("\n" + msg)
+    print(f"Para confirmar, digite exatamente: {word}")
+    return input("> ").strip() == word
 
 
 def human_size(n: int) -> str:
-    for unit in ('B', 'KB', 'MB', 'GB'):
-        if n < 1024:
-            return f"{n:.1f}{unit}"
-        n /= 1024.0
-    return f"{n:.1f}TB"
+    value = float(n)
+    for unit in ("B", "KB", "MB", "GB"):
+        if value < 1024:
+            return f"{value:.1f}{unit}"
+        value /= 1024.0
+    return f"{value:.1f}TB"
 
 
-def make_trash_dir(base_parent: str) -> str:
-    ts = datetime.now().strftime('whatsapp_clean_trash_%Y%m%d_%H%M%S')
-    dst = os.path.join(base_parent, ts)
-    os.makedirs(dst, exist_ok=True)
-    # Create a .nomedia file so Android's MediaScanner ignores this folder
+def normalize_text(value: str) -> str:
+    return "".join(ch for ch in value.lower() if ch.isalnum())
+
+
+def detect_media_base(current: str | None = None) -> str:
+    if current and os.path.exists(current):
+        return current
+    for path in KNOWN_MEDIA_BASES:
+        if os.path.exists(path):
+            return path
+    return current or KNOWN_MEDIA_BASES[0]
+
+
+def check_storage_access(media_base: str) -> Tuple[bool, str]:
+    if not os.path.exists(media_base):
+        return False, f"Pasta não encontrada: {media_base}"
     try:
-        nomedia_path = os.path.join(dst, '.nomedia')
-        # create the file if it doesn't exist
-        open(nomedia_path, 'a').close()
+        os.listdir(media_base)
+    except PermissionError:
+        return False, "Permissão negada ao acessar a pasta."
+    except Exception as exc:
+        return False, f"Erro ao acessar a pasta: {exc}"
+    return True, "OK"
+
+
+def explain_storage_fix(media_base: str, reason: str) -> None:
+    header("Permissão ou pasta não encontrada")
+    print(reason)
+    print("\nNo Termux, normalmente você precisa rodar este comando uma vez:")
+    print("  termux-setup-storage")
+    print("\nDepois feche e abra o Termux novamente, se necessário.")
+    print("\nPasta configurada:")
+    print(f"  {media_base}")
+    print("\nSe o seu WhatsApp usa outra pasta, altere em Configurações > Caminho da pasta.")
+
+
+def configure_media_path(cfg: Dict) -> None:
+    header("Caminho da pasta de mídia")
+    detected = detect_media_base(cfg.get("media_base"))
+    default_choice = "1"
+    if detected in KNOWN_MEDIA_BASES:
+        default_choice = str(KNOWN_MEDIA_BASES.index(detected) + 1)
+    print("O app vai procurar mídias dentro desta pasta:")
+    print(f"  {detected}")
+    print("\nPastas comuns detectadas:")
+    for idx, path in enumerate(KNOWN_MEDIA_BASES, start=1):
+        marker = "existe" if os.path.exists(path) else "não encontrada"
+        print(f"{idx}) {path} ({marker})")
+    print("4) Digitar outro caminho")
+
+    choice = prompt_choice("Escolha a pasta", {"1", "2", "3", "4"}, default_choice)
+    if choice in {"1", "2", "3"}:
+        cfg["media_base"] = KNOWN_MEDIA_BASES[int(choice) - 1]
+    else:
+        custom = input("Cole o caminho completo da pasta de mídia do WhatsApp: ").strip()
+        if custom:
+            cfg["media_base"] = custom
+    save_config(cfg)
+
+
+def apply_preset(cfg: Dict, key: str) -> None:
+    preset = PRESETS[key]
+    cfg["age_keep_days"] = preset["age_keep_days"]
+    cfg["age_trash_min"] = preset["age_trash_min"]
+    cfg["age_trash_max"] = preset["age_trash_max"]
+
+
+def configure_custom_ages(cfg: Dict) -> None:
+    header("Idades personalizadas")
+    print("Use números em dias. Exemplo: manter até 30 dias, mover de 31 a 90 dias para a lixeira e apagar acima de 90 dias.")
+    while True:
+        keep = prompt_int("Manter arquivos com até quantos dias", int(cfg["age_keep_days"]), 0)
+        trash_min = prompt_int("Mover para lixeira a partir de quantos dias", int(cfg["age_trash_min"]), keep + 1)
+        trash_max = prompt_int("Mover para lixeira até quantos dias", int(cfg["age_trash_max"]), trash_min)
+        if keep < trash_min <= trash_max:
+            cfg["age_keep_days"] = keep
+            cfg["age_trash_min"] = trash_min
+            cfg["age_trash_max"] = trash_max
+            save_config(cfg)
+            return
+        print("A ordem precisa ser: manter primeiro, depois mover para a lixeira, depois apagar definitivamente.")
+
+
+def configure_preset_or_custom(cfg: Dict) -> None:
+    header("Regras de limpeza")
+    print("Escolha um perfil de limpeza. Você sempre verá uma prévia antes de qualquer alteração.\n")
+    for key, preset in PRESETS.items():
+        extra = " (recomendado)" if key == "1" else ""
+        print(f"{key}) {preset['name']}{extra}: {preset['description']}")
+    print("4) Personalizado")
+
+    choice = prompt_choice("Escolha", {"1", "2", "3", "4"}, "1")
+    if choice == "4":
+        configure_custom_ages(cfg)
+    else:
+        apply_preset(cfg, choice)
+        save_config(cfg)
+
+
+def configure_included_folders(cfg: Dict) -> None:
+    header("Pastas incluídas")
+    print("A pasta 'Sent' guarda mídias que você enviou para outras pessoas.")
+    cfg["include_sent"] = prompt_yes_no("Incluir mídias enviadas", bool(cfg["include_sent"]))
+    print("\nA pasta 'Private' costuma guardar mídias ocultas da galeria. Por segurança, o padrão é não incluir.")
+    cfg["include_private"] = prompt_yes_no("Incluir mídias ocultas", bool(cfg["include_private"]))
+    cfg["show_top_files"] = prompt_int("Quantos arquivos grandes mostrar na prévia", int(cfg["show_top_files"]), 1)
+    save_config(cfg)
+
+
+def setup_wizard(cfg: Dict) -> None:
+    header("Primeira configuração")
+    print("Este app ajuda a liberar espaço apagando ou movendo mídias antigas do WhatsApp.")
+    print("Nada será alterado sem uma prévia e uma confirmação sua.")
+
+    cfg["media_base"] = detect_media_base(cfg.get("media_base"))
+    configure_media_path(cfg)
+
+    ok, reason = check_storage_access(cfg["media_base"])
+    if not ok:
+        explain_storage_fix(cfg["media_base"], reason)
+        pause()
+
+    configure_preset_or_custom(cfg)
+    configure_included_folders(cfg)
+    cfg["setup_complete"] = True
+    save_config(cfg)
+
+
+def get_relative_path(path: str, base: str) -> str:
+    try:
+        return str(Path(path).relative_to(Path(base)))
+    except ValueError:
+        return os.path.relpath(path, base)
+
+
+def detect_media_type(parts: List[str], ext: str) -> str | None:
+    normalized_parts = [normalize_text(part) for part in parts]
+    for key, allowed_exts in EXTENSION_MAP.items():
+        normalized_key = normalize_text(key)
+        if any(normalized_key in part for part in normalized_parts):
+            return key if ext in allowed_exts else None
+    return "other" if ext in GLOBAL_MEDIA_EXTS else None
+
+
+def action_for_age(age_days: int, cfg: Dict) -> str:
+    keep_d = int(cfg["age_keep_days"])
+    trash_min = int(cfg["age_trash_min"])
+    trash_max = int(cfg["age_trash_max"])
+    if age_days <= keep_d:
+        return "keep"
+    if trash_min <= age_days <= trash_max:
+        return "trash"
+    return "delete"
+
+
+def scan_files(media_base: str, cfg: Dict) -> Tuple[List[FileRecord], Dict]:
+    now = time.time()
+    records: List[FileRecord] = []
+    summary = {
+        "total_files": 0,
+        "total_size": 0,
+        "ignored_files": 0,
+        "permission_errors": 0,
+        "by_action": {key: {"count": 0, "size": 0} for key in ACTION_LABELS},
+        "by_media": {},
+    }
+
+    for root, dirs, files in os.walk(media_base):
+        dirs[:] = [d for d in dirs if not d.startswith(".")]
+        for filename in files:
+            path = os.path.join(root, filename)
+            name = filename.lower()
+            if name in EXCLUDE_NAMES or name.startswith("."):
+                summary["ignored_files"] += 1
+                continue
+
+            try:
+                stat = os.stat(path)
+            except FileNotFoundError:
+                continue
+            except PermissionError:
+                summary["permission_errors"] += 1
+                continue
+
+            rel_path = get_relative_path(path, media_base)
+            parts = [part.lower() for part in Path(rel_path).parts]
+            ext = Path(filename).suffix.lower().lstrip(".")
+            media_type = detect_media_type(parts, ext)
+            if media_type is None:
+                summary["ignored_files"] += 1
+                continue
+
+            if not cfg.get("include_private", False) and "private" in parts:
+                summary["ignored_files"] += 1
+                continue
+            if not cfg.get("include_sent", True) and "sent" in parts:
+                summary["ignored_files"] += 1
+                continue
+
+            age_days = int((now - stat.st_mtime) / 86400)
+            action = action_for_age(age_days, cfg)
+            record = FileRecord(
+                src=path,
+                rel_path=rel_path,
+                size=stat.st_size,
+                mtime=stat.st_mtime,
+                age_days=age_days,
+                action=action,
+                media_type=media_type,
+            )
+            records.append(record)
+
+            summary["total_files"] += 1
+            summary["total_size"] += stat.st_size
+            summary["by_action"][action]["count"] += 1
+            summary["by_action"][action]["size"] += stat.st_size
+            media_bucket = summary["by_media"].setdefault(media_type, {"count": 0, "size": 0})
+            media_bucket["count"] += 1
+            media_bucket["size"] += stat.st_size
+
+    return records, summary
+
+
+def print_config_summary(cfg: Dict) -> None:
+    print("Configuração atual:")
+    print(f"  Pasta: {cfg['media_base']}")
+    print(f"  Manter: até {cfg['age_keep_days']} dias")
+    print(f"  Mover para lixeira: {cfg['age_trash_min']} a {cfg['age_trash_max']} dias")
+    print(f"  Sugerir apagar: acima de {cfg['age_trash_max']} dias")
+    print(f"  Incluir mídias enviadas: {'sim' if cfg.get('include_sent') else 'não'}")
+    print(f"  Incluir mídias ocultas: {'sim' if cfg.get('include_private') else 'não'}")
+
+
+def print_report(records: List[FileRecord], summary: Dict, cfg: Dict) -> None:
+    header("Prévia da limpeza")
+    print_config_summary(cfg)
+    print("\nResumo:")
+    print(f"  Mídias analisadas: {summary['total_files']} ({human_size(summary['total_size'])})")
+    print(f"  Não incluídas por segurança ou configuração: {summary['ignored_files']}")
+    if summary["permission_errors"]:
+        print(f"  Arquivos sem permissão de leitura: {summary['permission_errors']}")
+
+    print("\nO que será feito:")
+    for action, label in ACTION_LABELS.items():
+        bucket = summary["by_action"][action]
+        print(f"  {label}: {bucket['count']} arquivos ({human_size(bucket['size'])})")
+
+    if summary["by_media"]:
+        print("\nPor tipo de mídia:")
+        for media_type, bucket in sorted(summary["by_media"].items(), key=lambda item: item[1]["size"], reverse=True):
+            label = MEDIA_LABELS.get(media_type, media_type)
+            print(f"  {label}: {bucket['count']} arquivos ({human_size(bucket['size'])})")
+
+    candidates = [r for r in records if r.action in {"trash", "delete"}]
+    if candidates:
+        print(f"\nArquivos maiores que podem ser limpos (mostrando {cfg['show_top_files']}):")
+        for idx, rec in enumerate(sorted(candidates, key=lambda r: r.size, reverse=True)[: int(cfg["show_top_files"])], start=1):
+            action = ACTION_LABELS[rec.action]
+            print(f"  {idx}) {human_size(rec.size)} | {rec.age_days} dias | {action} | {rec.rel_path}")
+
+
+def make_trash_dir(media_base: str) -> str:
+    base_parent = os.path.dirname(media_base)
+    timestamp = datetime.now().strftime("whatsapp_clean_trash_%Y%m%d_%H%M%S")
+    dst = os.path.join(base_parent, timestamp)
+    os.makedirs(dst, exist_ok=True)
+    try:
+        Path(os.path.join(dst, ".nomedia")).touch(exist_ok=True)
     except Exception:
-        # If we can't create .nomedia (e.g., permission issues), continue silently
         pass
     return dst
 
 
-def perform_actions(records: List[FileRecord], dry_run: bool, apply_moves: bool, apply_deletes: bool, cfg: Dict | None = None) -> str:
-    """Perform moves/deletes. Returns path to log file."""
-    if not records:
-        print('No files to act on.')
-        return ''
+def write_log(entries: List[Dict], cfg: Dict, moved_count: int, deleted_count: int, total_bytes: int) -> str:
+    ensure_dirs()
+    log_path = os.path.join(LOGS_DIR, datetime.now().strftime("log_%Y%m%d_%H%M%S.json"))
+    meta = {
+        "timestamp": datetime.now().isoformat(),
+        "media_base": cfg["media_base"],
+        "cfg": cfg,
+        "summary": {
+            "moved_count": moved_count,
+            "deleted_count": deleted_count,
+            "bytes_processed": total_bytes,
+        },
+    }
+    with open(log_path, "w", encoding="utf-8") as f:
+        json.dump({"meta": meta, "entries": entries}, f, indent=2, ensure_ascii=False)
+    return log_path
 
-    base_parent = os.path.dirname(MEDIA_BASE)
-    trash_dir = make_trash_dir(base_parent)
+
+def perform_actions(records: List[FileRecord], cfg: Dict, apply_moves: bool, apply_deletes: bool) -> str:
+    actionable = [r for r in records if (r.action == "trash" and apply_moves) or (r.action == "delete" and apply_deletes)]
+    if not actionable:
+        print("\nNenhuma alteração foi aplicada.")
+        return ""
+
+    trash_dir = None
+    if apply_moves and any(r.action == "trash" for r in actionable):
+        trash_dir = make_trash_dir(cfg["media_base"])
+
     log_entries = []
-
-    if cfg is None:
-        cfg = load_config()
-
-    keep_d = cfg.get('age_keep_days', DEFAULTS['age_keep_days'])
-    trash_min = cfg.get('age_trash_min', DEFAULTS['age_trash_min'])
-    trash_max = cfg.get('age_trash_max', DEFAULTS['age_trash_max'])
-
     moved_count = 0
     deleted_count = 0
     total_bytes = 0
 
-    for rec in records:
-        # recompute age to decide action
-        age_days = int((time.time() - rec.mtime) / 86400)
-        if age_days <= keep_d:
-            continue
+    for rec in actionable:
+        if rec.action == "trash":
+            assert trash_dir is not None
+            dst = os.path.join(trash_dir, rec.rel_path)
+            os.makedirs(os.path.dirname(dst), exist_ok=True)
+            try:
+                shutil.move(rec.src, dst)
+                moved_count += 1
+                total_bytes += rec.size
+                log_entries.append(
+                    {
+                        "src": rec.src,
+                        "dst": dst,
+                        "planned_dst": dst,
+                        "action": "move",
+                        "size": rec.size,
+                        "mtime": rec.mtime,
+                        "error": None,
+                    }
+                )
+            except Exception as exc:
+                print(f"Falha ao mover: {rec.rel_path} -> {exc}")
+                log_entries.append(
+                    {
+                        "src": rec.src,
+                        "dst": None,
+                        "planned_dst": dst,
+                        "action": "move",
+                        "size": rec.size,
+                        "mtime": rec.mtime,
+                        "error": str(exc),
+                    }
+                )
 
-        rel = os.path.relpath(rec.src, MEDIA_BASE)
-        dst = os.path.join(trash_dir, rel)
-        dst_dir = os.path.dirname(dst)
+        elif rec.action == "delete":
+            try:
+                os.remove(rec.src)
+                deleted_count += 1
+                total_bytes += rec.size
+                log_entries.append(
+                    {
+                        "src": rec.src,
+                        "dst": None,
+                        "planned_dst": None,
+                        "action": "delete",
+                        "size": rec.size,
+                        "mtime": rec.mtime,
+                        "error": None,
+                    }
+                )
+            except Exception as exc:
+                print(f"Falha ao apagar: {rec.rel_path} -> {exc}")
+                log_entries.append(
+                    {
+                        "src": rec.src,
+                        "dst": None,
+                        "planned_dst": None,
+                        "action": "delete",
+                        "size": rec.size,
+                        "mtime": rec.mtime,
+                        "error": str(exc),
+                    }
+                )
 
-        if trash_min <= age_days <= trash_max:
-            # move to trash
-            if dry_run:
-                print(f"DRY MOVE: {rec.src} -> {dst} ({human_size(rec.size)})")
-                log_entries.append({'src': rec.src, 'dst': None, 'planned_dst': dst, 'action': 'move', 'size': rec.size, 'mtime': rec.mtime, 'error': None})
-                continue
-            if apply_moves:
-                os.makedirs(dst_dir, exist_ok=True)
-                try:
-                    shutil.move(rec.src, dst)
-                    log_entries.append({'src': rec.src, 'dst': dst, 'planned_dst': dst, 'action': 'move', 'size': rec.size, 'mtime': rec.mtime, 'error': None})
-                    moved_count += 1
-                    total_bytes += rec.size
-                except Exception as e:
-                    print('Failed to move', rec.src, '->', e)
-                    log_entries.append({'src': rec.src, 'dst': None, 'planned_dst': dst, 'action': 'move', 'size': rec.size, 'mtime': rec.mtime, 'error': str(e)})
-
-        elif age_days > trash_max:
-            # candidate for delete (> trash_max)
-            if dry_run:
-                print(f"DRY DELETE: {rec.src} ({human_size(rec.size)})")
-                log_entries.append({'src': rec.src, 'dst': None, 'planned_dst': None, 'action': 'delete', 'size': rec.size, 'mtime': rec.mtime, 'error': None})
-                continue
-            if apply_deletes:
-                try:
-                    os.remove(rec.src)
-                    log_entries.append({'src': rec.src, 'dst': None, 'planned_dst': None, 'action': 'delete', 'size': rec.size, 'mtime': rec.mtime, 'error': None})
-                    deleted_count += 1
-                    total_bytes += rec.size
-                except Exception as e:
-                    print('Failed to delete', rec.src, '->', e)
-                    log_entries.append({'src': rec.src, 'dst': None, 'planned_dst': None, 'action': 'delete', 'size': rec.size, 'mtime': rec.mtime, 'error': str(e)})
-
-    # write log
-    if log_entries:
-        ensure_dirs()
-        meta = {
-            'timestamp': datetime.now().isoformat(),
-            'cfg': cfg,
-            'summary': {'moved_count': moved_count, 'deleted_count': deleted_count, 'bytes_processed': total_bytes},
-        }
-        log_path = os.path.join(LOGS_DIR, datetime.now().strftime('log_%Y%m%d_%H%M%S.json'))
-        with open(log_path, 'w', encoding='utf-8') as f:
-            json.dump({'meta': meta, 'entries': log_entries}, f, indent=2)
-        print('Operation log written to', log_path)
-        return log_path
-    return ''
+    log_path = write_log(log_entries, cfg, moved_count, deleted_count, total_bytes)
+    print("\nLimpeza concluída.")
+    print(f"  Movidos para lixeira: {moved_count}")
+    print(f"  Apagados definitivamente: {deleted_count}")
+    print(f"  Espaço processado: {human_size(total_bytes)}")
+    print(f"  Registro da operação: {log_path}")
+    return log_path
 
 
-def restore_from_log(log_path: str):
-    print('Restore from log is a best-effort operation.')
-    try:
-        with open(log_path, 'r', encoding='utf-8') as f:
-            data = json.load(f)
-    except Exception as e:
-        print('Failed to read log:', e)
+def run_cleanup_flow(cfg: Dict) -> None:
+    header("Analisar e limpar")
+    ok, reason = check_storage_access(cfg["media_base"])
+    if not ok:
+        explain_storage_fix(cfg["media_base"], reason)
+        pause()
         return
 
-    entries = data.get('entries', [])
-    for entry in entries:
-        if entry.get('error'):
-            print('Skipping entry with error recorded:', entry.get('src'))
-            continue
+    print("Analisando arquivos. Em celulares com muita mídia, isso pode levar alguns minutos...")
+    records, summary = scan_files(cfg["media_base"], cfg)
+    print_report(records, summary, cfg)
 
-        # Determine actual source: prefer recorded dst (where file was moved), else planned_dst
-        actual_src = entry.get('dst') or entry.get('planned_dst')
-        dst = entry.get('src')
-        if not actual_src or not dst:
-            print('Skipping malformed log entry:', entry)
-            continue
-        if not os.path.exists(actual_src):
-            print('Cannot restore, source missing:', actual_src)
-            continue
-        os.makedirs(os.path.dirname(dst), exist_ok=True)
-        try:
-            shutil.move(actual_src, dst)
-            print('Restored', dst)
-        except Exception as e:
-            print('Failed restore', actual_src, '->', e)
+    trash_bucket = summary["by_action"]["trash"]
+    delete_bucket = summary["by_action"]["delete"]
+    if trash_bucket["count"] == 0 and delete_bucket["count"] == 0:
+        print("\nNada antigo o suficiente para limpar com as regras atuais.")
+        pause()
+        return
+
+    print("\nEsta foi apenas a prévia. Nenhum arquivo foi alterado ainda.")
+    if not prompt_yes_no("Deseja aplicar alguma limpeza agora", default_yes=False):
+        return
+
+    apply_moves = False
+    apply_deletes = False
+    if trash_bucket["count"]:
+        apply_moves = prompt_yes_no(
+            f"Mover {trash_bucket['count']} arquivos ({human_size(trash_bucket['size'])}) para a lixeira",
+            default_yes=True,
+        )
+    if delete_bucket["count"]:
+        wants_delete = prompt_yes_no(
+            f"Também apagar definitivamente {delete_bucket['count']} arquivos ({human_size(delete_bucket['size'])})",
+            default_yes=False,
+        )
+        if wants_delete:
+            apply_deletes = strong_confirm(
+                "Apagar definitivamente não pode ser desfeito por este app. "
+                "Arquivos movidos para a lixeira podem ser restaurados; arquivos apagados não.",
+                word="APAGAR",
+            )
+
+    perform_actions(records, cfg, apply_moves, apply_deletes)
+    pause()
 
 
 def list_available_logs() -> List[str]:
-    """Return a sorted list of log file paths in LOGS_DIR (most recent first)."""
     try:
-        files = [os.path.join(LOGS_DIR, p) for p in os.listdir(LOGS_DIR) if p.endswith('.json')]
+        files = [os.path.join(LOGS_DIR, name) for name in os.listdir(LOGS_DIR) if name.endswith(".json")]
     except FileNotFoundError:
         return []
-    files.sort(reverse=True)
-    return files
+    return sorted(files, reverse=True)
 
 
 def preview_restore_from_log(log_path: str) -> Tuple[List[Dict], List[Dict]]:
-    """Return two lists: (restorable_entries, skipped_entries).
+    with open(log_path, "r", encoding="utf-8") as f:
+        data = json.load(f)
 
-    restorable_entries: entries that appear to be recoverable (dst/planned_dst exists and no error)
-    skipped_entries: entries that cannot be restored with reasons (missing fields, missing files, error recorded)
-    """
     restorable = []
     skipped = []
-    try:
-        with open(log_path, 'r', encoding='utf-8') as f:
-            data = json.load(f)
-    except Exception as e:
-        raise
-
-    entries = data.get('entries', [])
-    for entry in entries:
+    for entry in data.get("entries", []):
         reason = None
-        if entry.get('error'):
-            reason = 'error_recorded'
-        actual_src = entry.get('dst') or entry.get('planned_dst')
-        dst = entry.get('src')
-        if not actual_src or not dst:
-            reason = reason or 'malformed_entry'
+        if entry.get("error"):
+            reason = "erro registrado na operação"
+        if entry.get("action") != "move":
+            reason = reason or "arquivo apagado definitivamente"
+
+        actual_src = entry.get("dst") or entry.get("planned_dst")
+        restore_to = entry.get("src")
+        if not actual_src or not restore_to:
+            reason = reason or "entrada incompleta"
         elif not os.path.exists(actual_src):
-            reason = reason or 'source_missing'
+            reason = reason or "arquivo não encontrado na lixeira"
 
         if reason:
-            skipped.append({'entry': entry, 'reason': reason})
+            skipped.append({"entry": entry, "reason": reason})
         else:
-            restorable.append({'entry': entry, 'current_location': actual_src, 'restore_to': dst})
-
+            restorable.append({"entry": entry, "current_location": actual_src, "restore_to": restore_to})
     return restorable, skipped
 
 
-def main_menu():
+def restore_from_log(log_path: str) -> None:
+    restorable, skipped = preview_restore_from_log(log_path)
+    header("Prévia de restauração")
+    print(f"Podem ser restaurados: {len(restorable)}")
+    print(f"Não podem ser restaurados: {len(skipped)}")
+
+    for idx, item in enumerate(restorable[:20], start=1):
+        entry = item["entry"]
+        print(f"  {idx}) {human_size(entry.get('size', 0))} | {item['restore_to']}")
+    if len(restorable) > 20:
+        print(f"  ... e mais {len(restorable) - 20} arquivos")
+
+    if skipped:
+        print("\nItens que não serão restaurados:")
+        for item in skipped[:10]:
+            print(f"  - {item['entry'].get('src')} ({item['reason']})")
+
+    if not restorable:
+        pause()
+        return
+    if not prompt_yes_no("Restaurar estes arquivos agora", default_yes=False):
+        return
+
+    restored = 0
+    for item in restorable:
+        src = item["current_location"]
+        dst = item["restore_to"]
+        os.makedirs(os.path.dirname(dst), exist_ok=True)
+        try:
+            shutil.move(src, dst)
+            restored += 1
+        except Exception as exc:
+            print(f"Falha ao restaurar {dst}: {exc}")
+    print(f"\nArquivos restaurados: {restored}")
+    pause()
+
+
+def run_restore_flow() -> None:
+    header("Restaurar arquivos")
+    logs = list_available_logs()
+    if not logs:
+        print("Nenhum registro de limpeza encontrado.")
+        pause()
+        return
+
+    for idx, path in enumerate(logs[:20], start=1):
+        print(f"{idx}) {os.path.basename(path)}")
+    print("0) Voltar")
+
+    choice = prompt_int("Escolha um registro", 1, 0)
+    if choice == 0:
+        return
+    if choice < 1 or choice > min(len(logs), 20):
+        print("Opção inválida.")
+        pause()
+        return
+    restore_from_log(logs[choice - 1])
+
+
+def run_settings_flow(cfg: Dict) -> None:
+    while True:
+        header("Configurações")
+        print_config_summary(cfg)
+        print("\n1) Usar perfil de limpeza")
+        print("2) Editar idades manualmente")
+        print("3) Escolher pastas incluídas")
+        print("4) Alterar caminho do WhatsApp")
+        print("5) Refazer assistente inicial")
+        print("0) Voltar")
+
+        choice = prompt_choice("Escolha", {"0", "1", "2", "3", "4", "5"}, "0")
+        if choice == "0":
+            return
+        if choice == "1":
+            configure_preset_or_custom(cfg)
+        elif choice == "2":
+            configure_custom_ages(cfg)
+        elif choice == "3":
+            configure_included_folders(cfg)
+        elif choice == "4":
+            configure_media_path(cfg)
+        elif choice == "5":
+            setup_wizard(cfg)
+
+
+def show_help() -> None:
+    header("Ajuda rápida")
+    print("1. Primeiro use 'Analisar e limpar' para ver a prévia.")
+    print("2. Arquivos em 'Mover para lixeira' saem da pasta do WhatsApp, mas podem ser restaurados pelo menu.")
+    print("3. Arquivos em 'Apagar definitivamente' só são removidos se você digitar APAGAR.")
+    print("4. Para ser mais conservador, escolha o perfil Seguro em Configurações.")
+    print("5. Se aparecer permissão negada, rode no Termux: termux-setup-storage")
+    pause()
+
+
+def main_menu() -> None:
     cfg = load_config()
     ensure_dirs()
-    first_run_permission_check(cfg)
+    if not cfg.get("setup_complete"):
+        setup_wizard(cfg)
 
     while True:
-        print('\nLimpador de Mídia do WhatsApp - Menu')
-        print('1) Análise e limpeza (scan → report → aplicar) [recomendada]')
-        print('2) Restaurar arquivos a partir de um log')
-        print('3) Configurações')
-        print('4) Sair')
-        choice = input('Escolha uma opção [1]: ').strip() or '1'
-        if choice == '1':
-            print('Analisando... (pode levar alguns minutos)')
-            # Use config defaults as the initial choice
-            default_private = bool(cfg.get('include_private', DEFAULTS['include_private']))
-            default_sent = bool(cfg.get('include_sent', DEFAULTS['include_sent']))
-            include_private = prompt_yes_no('Incluir pastas Private?', default_yes=default_private)
-            include_sent = prompt_yes_no('Incluir pastas Sent?', default_yes=default_sent)
-            if prompt_yes_no('Salvar estas escolhas como padrão no config?', default_yes=False):
-                cfg['include_private'] = include_private
-                cfg['include_sent'] = include_sent
-                save_config(cfg)
-            records, counts = scan_files(MEDIA_BASE, include_private=include_private, include_sent=include_sent, cfg=cfg)
-            print('Resumo:', counts)
-            total_size = sum(r.size for r in records)
-            print(f'Total de arquivos analisados: {len(records)}, tamanho total ~ {human_size(total_size)}')
+        header("Limpador de mídia do WhatsApp")
+        print_config_summary(cfg)
+        print("\n1) Analisar e limpar")
+        print("2) Configurações")
+        print("3) Restaurar arquivos da lixeira")
+        print("4) Ajuda")
+        print("0) Sair")
 
-            dry = prompt_yes_no('Executar em modo simulação (dry-run)? (nenhuma alteração será feita)', default_yes=True)
-
-            apply_moves = False
-            apply_deletes = False
-            if not dry:
-                # load current limits from cfg so prompts reflect actual values
-                current_keep = cfg.get('age_keep_days', DEFAULTS['age_keep_days'])
-                current_trash_min = cfg.get('age_trash_min', DEFAULTS['age_trash_min'])
-                current_trash_max = cfg.get('age_trash_max', DEFAULTS['age_trash_max'])
-
-                apply_moves = prompt_yes_no(f'Aplicar movimentações ({current_trash_min}–{current_trash_max} dias) para a lixeira?', default_yes=True)
-                if apply_moves:
-                    print('Arquivos em /Private/ exigirão confirmação adicional antes de mover.')
-                # deletion requires strong confirmation
-                want_delete = prompt_yes_no(f'Também excluir arquivos com mais de {current_trash_max} dias?', default_yes=False)
-                if want_delete:
-                    ok = strong_confirm(f'Você está prestes a EXCLUIR PERMANENTEMENTE arquivos com mais de {current_trash_max} dias. Isso é irreversível.')
-                    apply_deletes = ok
-
-            log = perform_actions(records, dry_run=dry, apply_moves=apply_moves, apply_deletes=apply_deletes, cfg=cfg)
-            if log:
-                print('Veja o log para detalhes e possíveis instruções de restauração.')
-
-        elif choice == '2':
-            print('Logs disponíveis:')
-            logs = list_available_logs()
-            if not logs:
-                print('Nenhum log encontrado em', LOGS_DIR)
-                continue
-            for i, p in enumerate(logs, start=1):
-                print(f"{i}) {os.path.basename(p)}  ({p})")
-            sel = input('Escolha um log para pré-visualizar (número) ou caminho completo: ').strip()
-            chosen = None
-            if sel.isdigit():
-                idx = int(sel) - 1
-                if 0 <= idx < len(logs):
-                    chosen = logs[idx]
-            else:
-                # accept direct path
-                if sel:
-                    chosen = sel
-
-            if not chosen:
-                print('Seleção inválida; retornando ao menu.')
-                continue
-
-            try:
-                restorable, skipped = preview_restore_from_log(chosen)
-            except Exception as e:
-                print('Falha ao ler/prever log:', e)
-                continue
-
-            print('\nEntradas restauráveis:')
-            for i, it in enumerate(restorable, start=1):
-                e = it['entry']
-                print(f"{i}) {e.get('src')}  <- {it['current_location']}")
-            print(f"Total restauráveis: {len(restorable)}")
-
-            if skipped:
-                print('\nEntradas puladas (não restauráveis):')
-                for s in skipped:
-                    e = s['entry']
-                    print(f"- {e.get('src')}  reason={s['reason']}")
-
-            if not restorable:
-                print('Nada a restaurar neste log.')
-                continue
-
-            if prompt_yes_no('Deseja restaurar as entradas listadas agora?', default_yes=False):
-                restore_from_log(chosen)
-
-        elif choice == '3':
-            print('Configurações:')
-            print(json.dumps(cfg, indent=2))
-            if prompt_yes_no('Editar limites de idade? (padrão 30/31-60/60+)', default_yes=False):
-                try:
-                    new_keep = int(input(f"Manter arquivos até (dias) [{cfg.get('age_keep_days')}]: ").strip() or cfg.get('age_keep_days'))
-                    new_trash_min = int(input(f"Mover para Trash entre (dias) [{cfg.get('age_trash_min')}]: ").strip() or cfg.get('age_trash_min'))
-                    new_trash_max = int(input(f"Excluir acima de (dias) [{cfg.get('age_trash_max')}]: ").strip() or cfg.get('age_trash_max'))
-                    cfg['age_keep_days'] = new_keep
-                    cfg['age_trash_min'] = new_trash_min
-                    cfg['age_trash_max'] = new_trash_max
-                    save_config(cfg)
-                    print('Limites atualizados.')
-                except ValueError:
-                    print('Valores inválidos; mantendo as configurações anteriores.')
-
-            if prompt_yes_no('Alternar auto_prune (mover+deletar sem confirmação)?', default_yes=False):
-                if not cfg.get('auto_prune'):
-                    print('auto_prune exige confirmação forte. Você confirma que deseja ativar auto_prune?')
-                    if strong_confirm('Digite YES para ativar auto_prune (exclusões automáticas acima do limite):'):
-                        cfg['auto_prune'] = True
-                        save_config(cfg)
-                        print('auto_prune ativado')
-                else:
-                    cfg['auto_prune'] = False
-                    save_config(cfg)
-                    print('auto_prune desativado')
-
-        elif choice == '4':
-            print('Saindo')
+        choice = prompt_choice("Escolha", {"0", "1", "2", "3", "4"}, "1")
+        if choice == "1":
+            run_cleanup_flow(cfg)
+        elif choice == "2":
+            run_settings_flow(cfg)
+        elif choice == "3":
+            run_restore_flow()
+        elif choice == "4":
+            show_help()
+        elif choice == "0":
+            print("Saindo.")
             return
-        else:
-            print('Opção inválida')
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     try:
         main_menu()
     except KeyboardInterrupt:
-        print('\nInterrupted')
+        print("\nInterrompido.")

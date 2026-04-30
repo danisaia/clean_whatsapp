@@ -1,3 +1,2 @@
-# No external dependencies required for the current skeleton.
-# If you add external libs later, list them here, e.g.:
-# click==8.1.7
+# No external dependencies required.
+# The app uses only Python's standard library.
