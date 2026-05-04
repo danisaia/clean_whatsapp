@@ -6,6 +6,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, List, Tuple
 
+from typing import Callable, Optional
+
 from .config import KNOWN_MEDIA_BASES
 
 
@@ -100,7 +102,7 @@ def media_type_enabled(media_type: str, cfg: Dict) -> bool:
     return True
 
 
-def scan_files(media_base: str, cfg: Dict) -> Tuple[List[FileRecord], Dict]:
+def scan_files(media_base: str, cfg: Dict, progress_fn: Optional[Callable[[str], None]] = None) -> Tuple[List[FileRecord], Dict]:
     now = time.time()
     records: List[FileRecord] = []
     summary = {
@@ -112,7 +114,7 @@ def scan_files(media_base: str, cfg: Dict) -> Tuple[List[FileRecord], Dict]:
         "by_media": {},
     }
 
-    for root, dirs, files in os.walk(media_base):
+    for root, dirs, files in os.walk(media_base, followlinks=False):
         dirs[:] = [d for d in dirs if not d.startswith(".")]
         for filename in files:
             path = os.path.join(root, filename)
@@ -162,6 +164,8 @@ def scan_files(media_base: str, cfg: Dict) -> Tuple[List[FileRecord], Dict]:
 
             summary["total_files"] += 1
             summary["total_size"] += stat.st_size
+            if progress_fn and summary["total_files"] % 500 == 0:
+                progress_fn(f"  {summary['total_files']} files, {summary['total_size'] / (1024*1024):.0f} MB")
             summary["by_action"][action]["count"] += 1
             summary["by_action"][action]["size"] += stat.st_size
             media_bucket = summary["by_media"].setdefault(media_type, {"count": 0, "size": 0})

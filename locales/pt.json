@@ -97,6 +97,8 @@
   "cleanup_filters_intro": "Escolha o que esta análise deve incluir. Você pode mudar isso antes de cada limpeza.",
   "review_filters_before_scan": "Revisar filtros antes de analisar",
   "scanning": "Analisando arquivos. Em celulares com muita mídia, isso pode levar alguns minutos...",
+  "scan_time": "Análise concluída em {seconds}s",
+  "scan_done": "Encontrados {count} arquivos em {seconds}s",
   "nothing_to_clean": "Nada antigo o suficiente para limpar com as regras atuais.",
   "preview_only": "Esta foi apenas a prévia. Nenhum arquivo foi alterado ainda.",
   "apply_cleanup": "Deseja aplicar alguma limpeza agora",
@@ -135,6 +137,7 @@
   "menu_restore": "Restaurar arquivos da lixeira",
   "menu_update": "Atualizar Clean WhatsApp",
   "menu_help": "Ajuda",
+  "menu_history": "Histórico de limpeza",
   "menu_exit": "Sair",
   "update_title": "Atualizar Clean WhatsApp",
   "update_intro": "Isto vai executar git pull origin main na pasta do projeto.",
@@ -166,5 +169,12 @@
   "config_error_media_base": "A pasta do WhatsApp está vazia.",
   "config_error_keep_days": "O valor de manter dias não pode ser negativo.",
   "config_error_age_order": "A ordem das idades está inválida.",
-  "config_error_top_files": "A quantidade de arquivos da prévia precisa ser pelo menos 1."
+  "config_error_top_files": "A quantidade de arquivos da prévia precisa ser pelo menos 1.",
+  "history_title": "Histórico de limpeza",
+  "history_operations": "Limpezas anteriores: {count}",
+  "history_moved": "Arquivos movidos para lixeira: {count}",
+  "history_deleted": "Arquivos apagados definitivamente: {count}",
+  "history_freed": "Espaço total liberado: {size}",
+  "history_last": "Última limpeza: {date}",
+  "pending_warning": "A operação anterior pode ter sido interrompida. Verifique seus logs."
 }

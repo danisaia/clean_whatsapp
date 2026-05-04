@@ -18,8 +18,13 @@ def list_available_logs(logs_dir: Path = LOGS_DIR) -> List[str]:
 
 
 def preview_restore_from_log(log_path: str) -> Tuple[List[Dict], List[Dict]]:
-    with open(log_path, "r", encoding="utf-8") as f:
-        data = json.load(f)
+    try:
+        with open(log_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+    except FileNotFoundError:
+        return [], [{"reason_key": "restore_reason_missing", "entry": {"src": log_path}}]
+    except json.JSONDecodeError:
+        return [], [{"reason_key": "restore_reason_incomplete", "entry": {"src": log_path}}]
 
     restorable = []
     skipped = []

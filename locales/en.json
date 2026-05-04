@@ -97,6 +97,8 @@
   "cleanup_filters_intro": "Choose what this scan should include. You can change this before every cleanup.",
   "review_filters_before_scan": "Review filters before scanning",
   "scanning": "Analyzing files. On phones with lots of media, this may take a few minutes...",
+  "scan_time": "Scan completed in {seconds}s",
+  "scan_done": "Found {count} files in {seconds}s",
   "nothing_to_clean": "Nothing is old enough to clean with the current rules.",
   "preview_only": "This was only a preview. No file has been changed yet.",
   "apply_cleanup": "Do you want to apply any cleanup now",
@@ -135,6 +137,7 @@
   "menu_restore": "Restore files from trash",
   "menu_update": "Update Clean WhatsApp",
   "menu_help": "Help",
+  "menu_history": "Cleanup history",
   "menu_exit": "Exit",
   "update_title": "Update Clean WhatsApp",
   "update_intro": "This will run git pull origin main in the project folder.",
@@ -166,5 +169,12 @@
   "config_error_media_base": "The WhatsApp folder is empty.",
   "config_error_keep_days": "The keep-days value cannot be negative.",
   "config_error_age_order": "The age order is invalid.",
-  "config_error_top_files": "The preview file count must be at least 1."
+  "config_error_top_files": "The preview file count must be at least 1.",
+  "history_title": "Cleanup history",
+  "history_operations": "Past cleanups: {count}",
+  "history_moved": "Files moved to trash: {count}",
+  "history_deleted": "Files permanently deleted: {count}",
+  "history_freed": "Total space freed: {size}",
+  "history_last": "Last cleanup: {date}",
+  "pending_warning": "The previous operation may have been interrupted. Check your logs."
 }

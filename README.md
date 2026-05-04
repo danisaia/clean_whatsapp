@@ -1,4 +1,4 @@
-# Clean WhatsApp 1.0.0 for Termux
+# Clean WhatsApp 1.1.0 for Termux
 
 Clean WhatsApp is a simple Termux app for Android that helps free up phone storage by cleaning old WhatsApp media.
 
@@ -14,6 +14,11 @@ It is designed for regular users:
 - From the second launch onward, it quietly checks for updates and only shows a message when a new version is available.
 - It shows how much storage can be freed before applying cleanup.
 - It lets users filter images, videos, audio, stickers, sent media, and hidden media before scanning.
+- It shows a progress indicator and elapsed time while scanning large folders.
+- It color-codes the preview output (green for keep, yellow for trash, red for delete).
+- It provides a cleanup history screen with statistics of all past operations.
+- It detects interrupted operations and warns the user on next launch.
+- It automatically cleans empty directories left behind after moving files.
 
 ## Supported languages
 
@@ -33,6 +38,7 @@ The app tries to detect common WhatsApp folders:
 ```text
 /storage/emulated/0/Android/media/com.whatsapp/WhatsApp/Media
 /storage/emulated/0/Android/media/com.whatsapp.w4b/WhatsApp Business/Media
+/storage/emulated/0/Android/media/com.gbwhatsapp/WhatsApp/Media
 /storage/emulated/0/WhatsApp/Media
 ```
 
@@ -128,6 +134,7 @@ chmod +x clean-whatsapp install-shortcut.sh
 3) Restore files from trash
 4) Update Clean WhatsApp
 5) Help
+6) Cleanup history
 0) Exit
 ```
 
@@ -170,6 +177,29 @@ Files moved to trash can be restored from:
 ```
 
 Files deleted permanently cannot be restored by this app.
+
+## Cleanup history
+
+The app keeps a log of every cleanup operation. To view the history:
+
+```text
+6) Cleanup history
+```
+
+The history screen shows:
+- Total number of past cleanups.
+- Total files moved to trash.
+- Total files permanently deleted.
+- Total space freed across all operations.
+- Date of the last cleanup.
+
+Logs are stored at:
+
+```text
+~/.local/share/clean-whatsapp/logs/
+```
+
+If a cleanup operation was interrupted (e.g., the phone restarted), the app warns you on the next launch.
 
 ## Config and records
 

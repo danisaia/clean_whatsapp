@@ -14,9 +14,10 @@ CONTEÚDO
 3. Primeira configuração
 4. Limpar mídias antigas
 5. Lixeira e restauração
-6. Alterar configurações
-7. Problemas de permissão
-8. Dica de segurança
+6. Histórico de limpeza
+7. Alterar configurações
+8. Problemas de permissão
+9. Dica de segurança
 
 
 1. ATUALIZAR O APP
@@ -96,7 +97,22 @@ Para restaurar, escolha:
 Arquivos apagados definitivamente não podem ser restaurados pelo app.
 
 
-6. ALTERAR CONFIGURAÇÕES
+6. HISTÓRICO DE LIMPEZA
+-----------------------
+Para ver estatísticas de todas as limpezas anteriores, escolha:
+
+    6) Histórico de limpeza
+
+A tela mostra:
+
+- Quantas limpezas já foram realizadas.
+- Total de arquivos movidos para a lixeira.
+- Total de arquivos apagados definitivamente.
+- Espaço total liberado.
+- Data da última limpeza.
+
+
+7. ALTERAR CONFIGURAÇÕES
 ------------------------
 Para mudar as regras de limpeza ou as pastas incluídas, escolha:
 
@@ -112,7 +128,7 @@ Você pode:
 - Alterar o idioma do app.
 
 
-7. PROBLEMAS DE PERMISSÃO
+8. PROBLEMAS DE PERMISSÃO
 -------------------------
 Se o app não conseguir acessar o armazenamento, rode:
 
@@ -121,7 +137,7 @@ Se o app não conseguir acessar o armazenamento, rode:
 Depois feche e abra o Termux novamente.
 
 
-8. DICA DE SEGURANÇA
+9. DICA DE SEGURANÇA
 --------------------
 Na dúvida, não apague definitivamente. Mova para a lixeira primeiro e restaure
 depois se precisar.

@@ -14,9 +14,10 @@ CONTENTS
 3. First setup
 4. Clean old media
 5. Trash and restore
-6. Change settings
-7. Permission problems
-8. Safety tip
+6. Cleanup history
+7. Change settings
+8. Permission problems
+9. Safety tip
 
 
 1. UPDATE THE APP
@@ -96,7 +97,22 @@ To restore, choose:
 Files deleted permanently cannot be restored by this app.
 
 
-6. CHANGE SETTINGS
+6. CLEANUP HISTORY
+------------------
+To view statistics of all past cleanups, choose:
+
+    6) Cleanup history
+
+The screen shows:
+
+- How many cleanups have been performed.
+- Total files moved to trash.
+- Total files permanently deleted.
+- Total space freed.
+- Date of the last cleanup.
+
+
+7. CHANGE SETTINGS
 ------------------
 To change cleanup rules or included folders, choose:
 
@@ -112,7 +128,7 @@ You can:
 - Change the app language.
 
 
-7. PERMISSION PROBLEMS
+8. PERMISSION PROBLEMS
 ----------------------
 If the app cannot access storage, run:
 
@@ -121,7 +137,7 @@ If the app cannot access storage, run:
 Then close and reopen Termux.
 
 
-8. SAFETY TIP
+9. SAFETY TIP
 -------------
 When in doubt, do not delete permanently. Move files to trash first and
 restore them later if needed.

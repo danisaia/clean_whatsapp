@@ -1,12 +1,14 @@
 from __future__ import annotations
 
+import json
 import os
 import subprocess
+import time
 from pathlib import Path
 from typing import Dict, Iterable, List
 
-from .actions import perform_actions
-from .config import KNOWN_MEDIA_BASES, normalize_config, save_config, validate_config
+from .actions import PENDING_FILE, perform_actions
+from .config import KNOWN_MEDIA_BASES, LOGS_DIR, normalize_config, save_config, validate_config
 from .i18n import I18n, LANGUAGES, PROJECT_ROOT
 from .restore import list_available_logs, preview_restore_from_log, restore_entries
 from .scanner import ACTION_KEYS, check_storage_access, detect_media_base, scan_files
@@ -38,6 +40,15 @@ ACTION_LABEL_KEYS = {
 
 
 class UI:
+    COLORS = {
+        "green": "\033[32m",
+        "yellow": "\033[33m",
+        "red": "\033[31m",
+        "cyan": "\033[36m",
+        "bold": "\033[1m",
+        "reset": "\033[0m",
+    }
+
     def __init__(self, cfg: Dict, i18n: I18n) -> None:
         self.cfg = normalize_config(cfg)
         self.i18n = i18n
@@ -139,6 +150,16 @@ class UI:
             value /= 1024.0
         return f"{value:.1f}TB"
 
+    def colorize(self, text: str, color: str) -> str:
+        c = self.COLORS.get(color)
+        return f"{c}{text}{self.COLORS['reset']}" if c else text
+
+    def truncate_path(self, path: str, max_len: int = 60) -> str:
+        return path if len(path) <= max_len else "..." + path[-(max_len - 3):]
+
+    def action_color(self, action: str) -> str:
+        return {"keep": "green", "trash": "yellow", "delete": "red"}.get(action, "reset")
+
     def select_language(self) -> None:
         self.screen(self.t("select_language_title"))
         print(self.t("select_language_intro", app=APP_NAME) + "\n")
@@ -177,7 +198,7 @@ class UI:
         print(f"4) {self.t('other_path')}")
 
         choice = self.prompt_choice(self.t("choose_folder"), {"1", "2", "3", "4"}, default_choice)
-        if choice in {"1", "2", "3"}:
+        if choice in {"1", "2", "3", "4"} and int(choice) <= len(KNOWN_MEDIA_BASES):
             self.cfg["media_base"] = KNOWN_MEDIA_BASES[int(choice) - 1]
         else:
             custom = input(self.t("custom_path") + ": ").strip()
@@ -292,9 +313,11 @@ class UI:
             items.append(self.t("filter_stickers_short"))
         return ", ".join(items) if items else self.t("none")
 
-    def print_report(self, records: List, summary: Dict) -> None:
+    def print_report(self, records: List, summary: Dict, elapsed: float = 0) -> None:
         self.screen(self.t("preview_title"))
         self.print_config_summary()
+        if elapsed:
+            print(f"  {self.t('scan_time', seconds=f'{elapsed:.1f}')}")
         print("\n" + self.t("summary"))
         print("  " + self.t("media_analyzed", count=summary["total_files"], size=self.human_size(summary["total_size"])))
         print("  " + self.t("ignored", count=summary["ignored_files"]))
@@ -306,7 +329,8 @@ class UI:
         print("\n" + self.t("what_will_happen"))
         for action in ACTION_KEYS:
             bucket = summary["by_action"][action]
-            print(f"  {self.t(ACTION_LABEL_KEYS[action])}: {bucket['count']} ({self.human_size(bucket['size'])})")
+            label = self.colorize(self.t(ACTION_LABEL_KEYS[action]), self.action_color(action))
+            print(f"  {label}: {bucket['count']} ({self.human_size(bucket['size'])})")
 
         if summary["by_media"]:
             print("\n" + self.t("category_preview_title"))
@@ -317,14 +341,18 @@ class UI:
                 trash_size = sum(r.size for r in media_records if r.action == "trash")
                 delete_size = sum(r.size for r in media_records if r.action == "delete")
                 print(f"  {label}: {bucket['count']} ({self.human_size(bucket['size'])})")
-                print(f"    {self.t('action_keep')}: {self.human_size(keep_size)} | {self.t('action_trash')}: {self.human_size(trash_size)} | {self.t('action_delete')}: {self.human_size(delete_size)}")
+                keep_label = self.colorize(self.t('action_keep'), 'green')
+                trash_label = self.colorize(self.t('action_trash'), 'yellow')
+                delete_label = self.colorize(self.t('action_delete'), 'red')
+                print(f"    {keep_label}: {self.human_size(keep_size)} | {trash_label}: {self.human_size(trash_size)} | {delete_label}: {self.human_size(delete_size)}")
 
         candidates = [r for r in records if r.action in {"trash", "delete"}]
         if candidates:
             print("\n" + self.t("largest_candidates", count=self.cfg["show_top_files"]))
             for idx, rec in enumerate(sorted(candidates, key=lambda r: r.size, reverse=True)[: int(self.cfg["show_top_files"])], start=1):
-                action = self.t(ACTION_LABEL_KEYS[rec.action])
-                print(f"  {idx}) {self.human_size(rec.size)} | {rec.age_days} {self.t('days_word')} | {action} | {rec.rel_path}")
+                action = self.colorize(self.t(ACTION_LABEL_KEYS[rec.action]), self.action_color(rec.action))
+                path_display = self.truncate_path(rec.rel_path)
+                print(f"  {idx}) {self.human_size(rec.size)} | {rec.age_days} {self.t('days_word')} | {action} | {path_display}")
 
     def run_cleanup_flow(self) -> None:
         self.screen(self.t("cleanup_title"))
@@ -339,8 +367,13 @@ class UI:
             return
 
         print(self.t("scanning"))
-        records, summary = scan_files(self.cfg["media_base"], self.cfg)
-        self.print_report(records, summary)
+        progress_fn = lambda msg: print(f"\r{msg}", end="", flush=True)
+        start_time = time.time()
+        records, summary = scan_files(self.cfg["media_base"], self.cfg, progress_fn=progress_fn)
+        elapsed = time.time() - start_time
+        if summary["total_files"]:
+            print(f"\r{self.t('scan_done', count=summary['total_files'], seconds=f'{elapsed:.1f}')}")
+        self.print_report(records, summary, elapsed)
 
         trash_bucket = summary["by_action"]["trash"]
         delete_bucket = summary["by_action"]["delete"]
@@ -419,6 +452,48 @@ class UI:
         print("\n" + self.t("restored_count", count=result["restored_count"]))
         self.pause()
 
+    def run_history_flow(self) -> None:
+        self.screen(self.t("history_title"))
+        logs = list_available_logs()
+        if not logs:
+            print(self.t("no_records"))
+            self.pause()
+            return
+
+        total_moved = 0
+        total_deleted = 0
+        total_bytes = 0
+        count = 0
+        for log_path in logs:
+            try:
+                with open(log_path, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                meta = data.get("meta", {})
+                summary = meta.get("summary", {})
+                total_moved += summary.get("moved_count", 0)
+                total_deleted += summary.get("deleted_count", 0)
+                total_bytes += summary.get("bytes_processed", 0)
+                count += 1
+            except (IOError, json.JSONDecodeError):
+                pass
+
+        print(self.t("history_operations", count=count))
+        print(self.t("history_moved", count=total_moved))
+        print(self.t("history_deleted", count=total_deleted))
+        print(self.t("history_freed", size=self.human_size(total_bytes)))
+
+        if logs:
+            last = logs[0]
+            try:
+                with open(last, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                ts = data.get("meta", {}).get("timestamp", "")[:10]
+                print(self.t("history_last", date=ts))
+            except (IOError, json.JSONDecodeError):
+                pass
+
+        self.pause()
+
     def run_update_flow(self) -> None:
         self.screen(self.t("update_title"))
         print(self.t("update_intro"))
@@ -490,10 +565,18 @@ class UI:
             self.setup_wizard()
         update_available = self.check_for_updates_silent()
 
+        pending_path = LOGS_DIR / PENDING_FILE
+        had_pending = pending_path.exists()
+        if had_pending:
+            pending_path.unlink(missing_ok=True)
+
         while True:
             self.screen(self.t("app_title", version=APP_VERSION))
             if update_available:
                 print(self.t("update_available_notice"))
+                print()
+            if had_pending:
+                print(self.colorize(self.t("pending_warning"), "red"))
                 print()
             self.print_config_summary()
             print(f"\n1) {self.t('menu_analyze')}")
@@ -501,9 +584,10 @@ class UI:
             print(f"3) {self.t('menu_restore')}")
             print(f"4) {self.t('menu_update')}")
             print(f"5) {self.t('menu_help')}")
+            print(f"6) {self.t('menu_history')}")
             print(f"0) {self.t('menu_exit')}")
 
-            choice = self.prompt_choice(self.t("choose"), {"0", "1", "2", "3", "4", "5"}, "1")
+            choice = self.prompt_choice(self.t("choose"), {"0", "1", "2", "3", "4", "5", "6"}, "1")
             if choice == "1":
                 self.run_cleanup_flow()
             elif choice == "2":
@@ -515,6 +599,8 @@ class UI:
                 update_available = self.check_for_updates_silent()
             elif choice == "5":
                 self.show_help()
+            elif choice == "6":
+                self.run_history_flow()
             elif choice == "0":
                 print(self.t("exiting"))
                 return

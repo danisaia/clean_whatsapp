@@ -14,9 +14,10 @@ SOMMAIRE
 3. Première configuration
 4. Nettoyer les anciens médias
 5. Corbeille et restauration
-6. Modifier les paramètres
-7. Problèmes d'autorisation
-8. Conseil de sécurité
+6. Historique des nettoyages
+7. Modifier les paramètres
+8. Problèmes d'autorisation
+9. Conseil de sécurité
 
 
 1. METTRE L'APP À JOUR
@@ -99,7 +100,22 @@ Les fichiers supprimés définitivement ne peuvent pas être restaurés par cett
 app.
 
 
-6. MODIFIER LES PARAMÈTRES
+6. HISTORIQUE DES NETTOYAGES
+-----------------------------
+Pour voir les statistiques de tous les nettoyages précédents, choisissez :
+
+    6) Historique des nettoyages
+
+L'écran affiche :
+
+- Combien de nettoyages ont été effectués.
+- Total des fichiers déplacés vers la corbeille.
+- Total des fichiers supprimés définitivement.
+- Espace total libéré.
+- Date du dernier nettoyage.
+
+
+7. MODIFIER LES PARAMÈTRES
 --------------------------
 Pour changer les règles de nettoyage ou les dossiers inclus, choisissez :
 
@@ -115,7 +131,7 @@ Vous pouvez :
 - Changer la langue de l'app.
 
 
-7. PROBLÈMES D'AUTORISATION
+8. PROBLÈMES D'AUTORISATION
 ---------------------------
 Si l'app ne peut pas accéder au stockage, exécutez :
 
@@ -124,7 +140,7 @@ Si l'app ne peut pas accéder au stockage, exécutez :
 Puis fermez et rouvrez Termux.
 
 
-8. CONSEIL DE SÉCURITÉ
+9. CONSEIL DE SÉCURITÉ
 ----------------------
 En cas de doute, ne supprimez pas définitivement. Déplacez d'abord les fichiers
 vers la corbeille et restaurez-les plus tard si nécessaire.

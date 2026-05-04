@@ -97,6 +97,8 @@
   "cleanup_filters_intro": "Elige qué debe incluir este análisis. Puedes cambiarlo antes de cada limpieza.",
   "review_filters_before_scan": "Revisar filtros antes de analizar",
   "scanning": "Analizando archivos. En teléfonos con muchos medios, esto puede tardar unos minutos...",
+  "scan_time": "Análisis completado en {seconds}s",
+  "scan_done": "Encontrados {count} archivos en {seconds}s",
   "nothing_to_clean": "No hay nada lo bastante antiguo para limpiar con las reglas actuales.",
   "preview_only": "Esto fue solo una vista previa. Ningún archivo ha cambiado todavía.",
   "apply_cleanup": "¿Quieres aplicar alguna limpieza ahora",
@@ -135,6 +137,7 @@
   "menu_restore": "Restaurar archivos de la papelera",
   "menu_update": "Actualizar Clean WhatsApp",
   "menu_help": "Ayuda",
+  "menu_history": "Historial de limpieza",
   "menu_exit": "Salir",
   "update_title": "Actualizar Clean WhatsApp",
   "update_intro": "Esto ejecutará git pull origin main en la carpeta del proyecto.",
@@ -166,5 +169,12 @@
   "config_error_media_base": "La carpeta de WhatsApp está vacía.",
   "config_error_keep_days": "El valor de días a conservar no puede ser negativo.",
   "config_error_age_order": "El orden de edades no es válido.",
-  "config_error_top_files": "La cantidad de archivos de la vista previa debe ser al menos 1."
+  "config_error_top_files": "La cantidad de archivos de la vista previa debe ser al menos 1.",
+  "history_title": "Historial de limpieza",
+  "history_operations": "Limpiezas anteriores: {count}",
+  "history_moved": "Archivos movidos a la papelera: {count}",
+  "history_deleted": "Archivos borrados definitivamente: {count}",
+  "history_freed": "Espacio total liberado: {size}",
+  "history_last": "Última limpieza: {date}",
+  "pending_warning": "La operación anterior puede haber sido interrumpida. Revisa tus registros."
 }

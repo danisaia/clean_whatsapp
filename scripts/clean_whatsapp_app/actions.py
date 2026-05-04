@@ -41,41 +41,71 @@ def write_log(entries: List[Dict], cfg: Dict, moved_count: int, deleted_count: i
     return str(log_path)
 
 
+PENDING_FILE = "last_operation.pending"
+
+
+def cleanup_empty_dirs(media_base: str) -> int:
+    removed = 0
+    for dirpath, dirnames, filenames in os.walk(media_base, topdown=False, followlinks=False):
+        if not dirnames and not filenames and dirpath != media_base:
+            try:
+                os.rmdir(dirpath)
+                removed += 1
+            except OSError:
+                pass
+    return removed
+
+
 def perform_actions(records: List[FileRecord], cfg: Dict, apply_moves: bool, apply_deletes: bool, logs_dir: Path = LOGS_DIR) -> Dict:
     actionable = [r for r in records if (r.action == "trash" and apply_moves) or (r.action == "delete" and apply_deletes)]
     result = {"log_path": "", "moved_count": 0, "deleted_count": 0, "bytes_processed": 0, "errors": []}
     if not actionable:
         return result
 
-    trash_dir = None
-    if apply_moves and any(r.action == "trash" for r in actionable):
-        trash_dir = make_trash_dir(cfg["media_base"])
+    pending_path = logs_dir / PENDING_FILE
+    try:
+        logs_dir.mkdir(parents=True, exist_ok=True)
+        pending_path.write_text("pending", encoding="utf-8")
 
-    log_entries = []
-    for rec in actionable:
-        if rec.action == "trash":
-            assert trash_dir is not None
-            dst = os.path.join(trash_dir, rec.rel_path)
-            os.makedirs(os.path.dirname(dst), exist_ok=True)
-            try:
-                shutil.move(rec.src, dst)
-                result["moved_count"] += 1
-                result["bytes_processed"] += rec.size
-                log_entries.append({"src": rec.src, "dst": dst, "planned_dst": dst, "action": "move", "size": rec.size, "mtime": rec.mtime, "error": None})
-            except Exception as exc:
-                result["errors"].append({"key": "move_failed", "path": rec.rel_path, "error": str(exc)})
-                log_entries.append({"src": rec.src, "dst": None, "planned_dst": dst, "action": "move", "size": rec.size, "mtime": rec.mtime, "error": str(exc)})
+        trash_dir = None
+        if apply_moves and any(r.action == "trash" for r in actionable):
+            trash_dir = make_trash_dir(cfg["media_base"])
 
-        elif rec.action == "delete":
-            try:
-                os.remove(rec.src)
-                result["deleted_count"] += 1
-                result["bytes_processed"] += rec.size
-                log_entries.append({"src": rec.src, "dst": None, "planned_dst": None, "action": "delete", "size": rec.size, "mtime": rec.mtime, "error": None})
-            except Exception as exc:
-                result["errors"].append({"key": "delete_failed", "path": rec.rel_path, "error": str(exc)})
-                log_entries.append({"src": rec.src, "dst": None, "planned_dst": None, "action": "delete", "size": rec.size, "mtime": rec.mtime, "error": str(exc)})
+        log_entries = []
+        for rec in actionable:
+            if rec.action == "trash":
+                assert trash_dir is not None
+                dst = os.path.join(trash_dir, rec.rel_path)
+                os.makedirs(os.path.dirname(dst), exist_ok=True)
+                try:
+                    shutil.move(rec.src, dst)
+                    result["moved_count"] += 1
+                    result["bytes_processed"] += rec.size
+                    log_entries.append({"src": rec.src, "dst": dst, "planned_dst": dst, "action": "move", "size": rec.size, "mtime": rec.mtime, "error": None})
+                except Exception as exc:
+                    result["errors"].append({"key": "move_failed", "path": rec.rel_path, "error": str(exc)})
+                    log_entries.append({"src": rec.src, "dst": None, "planned_dst": dst, "action": "move", "size": rec.size, "mtime": rec.mtime, "error": str(exc)})
 
-    result["log_path"] = write_log(log_entries, cfg, result["moved_count"], result["deleted_count"], result["bytes_processed"], logs_dir)
+            elif rec.action == "delete":
+                try:
+                    os.remove(rec.src)
+                    result["deleted_count"] += 1
+                    result["bytes_processed"] += rec.size
+                    log_entries.append({"src": rec.src, "dst": None, "planned_dst": None, "action": "delete", "size": rec.size, "mtime": rec.mtime, "error": None})
+                except Exception as exc:
+                    result["errors"].append({"key": "delete_failed", "path": rec.rel_path, "error": str(exc)})
+                    log_entries.append({"src": rec.src, "dst": None, "planned_dst": None, "action": "delete", "size": rec.size, "mtime": rec.mtime, "error": str(exc)})
+
+        if result["moved_count"]:
+            removed = cleanup_empty_dirs(cfg["media_base"])
+            if removed:
+                log_entries.append({"action": "cleanup_empty_dirs", "count": removed})
+
+        result["log_path"] = write_log(log_entries, cfg, result["moved_count"], result["deleted_count"], result["bytes_processed"], logs_dir)
+    finally:
+        try:
+            pending_path.unlink(missing_ok=True)
+        except Exception:
+            pass
     return result
 

@@ -97,6 +97,8 @@
   "cleanup_filters_intro": "Choisissez ce que cette analyse doit inclure. Vous pouvez le modifier avant chaque nettoyage.",
   "review_filters_before_scan": "Vérifier les filtres avant l'analyse",
   "scanning": "Analyse des fichiers. Sur les téléphones avec beaucoup de médias, cela peut prendre quelques minutes...",
+  "scan_time": "Analyse terminée en {seconds}s",
+  "scan_done": "{count} fichiers trouvés en {seconds}s",
   "nothing_to_clean": "Aucun fichier n'est assez ancien pour être nettoyé avec les règles actuelles.",
   "preview_only": "Ceci n'était qu'un aperçu. Aucun fichier n'a encore été modifié.",
   "apply_cleanup": "Voulez-vous appliquer un nettoyage maintenant",
@@ -135,6 +137,7 @@
   "menu_restore": "Restaurer les fichiers de la corbeille",
   "menu_update": "Mettre à jour Clean WhatsApp",
   "menu_help": "Aide",
+  "menu_history": "Historique des nettoyages",
   "menu_exit": "Quitter",
   "update_title": "Mettre à jour Clean WhatsApp",
   "update_intro": "Ceci va exécuter git pull origin main dans le dossier du projet.",
@@ -166,5 +169,12 @@
   "config_error_media_base": "Le dossier WhatsApp est vide.",
   "config_error_keep_days": "La valeur des jours à garder ne peut pas être négative.",
   "config_error_age_order": "L'ordre des âges est invalide.",
-  "config_error_top_files": "Le nombre de fichiers dans l'aperçu doit être au moins 1."
+  "config_error_top_files": "Le nombre de fichiers dans l'aperçu doit être au moins 1.",
+  "history_title": "Historique des nettoyages",
+  "history_operations": "Nettoyages précédents : {count}",
+  "history_moved": "Fichiers déplacés vers la corbeille : {count}",
+  "history_deleted": "Fichiers supprimés définitivement : {count}",
+  "history_freed": "Espace total libéré : {size}",
+  "history_last": "Dernier nettoyage : {date}",
+  "pending_warning": "L'opération précédente a peut-être été interrompue. Vérifiez vos journaux."
 }

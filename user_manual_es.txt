@@ -14,9 +14,10 @@ CONTENIDO
 3. Primera configuración
 4. Limpiar medios antiguos
 5. Papelera y restauración
-6. Cambiar ajustes
-7. Problemas de permiso
-8. Consejo de seguridad
+6. Historial de limpieza
+7. Cambiar ajustes
+8. Problemas de permiso
+9. Consejo de seguridad
 
 
 1. ACTUALIZAR LA APP
@@ -97,7 +98,22 @@ Para restaurar, elige:
 Los archivos borrados definitivamente no pueden restaurarse con esta app.
 
 
-6. CAMBIAR AJUSTES
+6. HISTORIAL DE LIMPIEZA
+------------------------
+Para ver estadísticas de todas las limpiezas anteriores, elige:
+
+    6) Historial de limpieza
+
+La pantalla muestra:
+
+- Cuántas limpiezas se han realizado.
+- Total de archivos movidos a la papelera.
+- Total de archivos borrados definitivamente.
+- Espacio total liberado.
+- Fecha de la última limpieza.
+
+
+7. CAMBIAR AJUSTES
 ------------------
 Para cambiar las reglas de limpieza o las carpetas incluidas, elige:
 
@@ -113,7 +129,7 @@ Puedes:
 - Cambiar el idioma de la app.
 
 
-7. PROBLEMAS DE PERMISO
+8. PROBLEMAS DE PERMISO
 -----------------------
 Si la app no puede acceder al almacenamiento, ejecuta:
 
@@ -122,7 +138,7 @@ Si la app no puede acceder al almacenamiento, ejecuta:
 Después cierra y vuelve a abrir Termux.
 
 
-8. CONSEJO DE SEGURIDAD
+9. CONSEJO DE SEGURIDAD
 -----------------------
 Si tienes dudas, no borres definitivamente. Mueve los archivos a la papelera
 primero y restáuralos después si hace falta.

@@ -9,6 +9,7 @@ from typing import Dict, List
 KNOWN_MEDIA_BASES = [
     "/storage/emulated/0/Android/media/com.whatsapp/WhatsApp/Media",
     "/storage/emulated/0/Android/media/com.whatsapp.w4b/WhatsApp Business/Media",
+    "/storage/emulated/0/Android/media/com.gbwhatsapp/WhatsApp/Media",
     "/storage/emulated/0/WhatsApp/Media",
 ]
 
